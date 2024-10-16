@@ -61,12 +61,4 @@ def check_irf_shape(rows, cols, values):
 time_axis = 0
 
 pipeline = pipeline.Pipeline(time_axis)
-
-with tiff.TiffFile("C2-dHL60_Control_DMSO_02_n-024_flute.tif") as tif:
-    imagej_meta = tif.imagej_metadata
-    imagej_meta.pop("ROI")
-    imagej_meta.pop("Labels")
-
-    for item in imagej_meta.items():
-        print(item)
         
