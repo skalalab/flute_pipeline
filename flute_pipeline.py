@@ -15,6 +15,7 @@ from pathlib import Path
 import os
 import sdt_reader as sdt
 import matplotlib.pyplot as plt
+from scipy import signal
 
 class Pipeline:
 
@@ -66,24 +67,37 @@ class Pipeline:
         if len(irf_values) != image_data.shape[2]:
             raise Exception("Number of IRF values don't match time bins")
         
+        time_bins = len(irf_values)
+        
         # sum 3d image data into 256 time bins
-        data_values = np.sum(image_data, 0)
-        data_values = list(np.sum(data_values, 0))
-        plt.plot(data_values)
-        plt.show()
-        print(len(data_values))
+        data_values = np.sum(image_data, 1)
+        data_values = np.sum(data_values, 0)
         
-        plt.plot(irf_values)
-        plt.show()
-        print(len(irf_values))
+        # Interpolate 9 values bewteen each time bin (linear) of values
+        x_scale_factor = 10
+        max_bin = (time_bins * x_scale_factor) - (x_scale_factor - 1)
         
-        irf_array = np.empty((image_data.shape[0], image_data.shape[1], len(irf_values)), dtype=np.float32)
+        interp_irf_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), irf_values)
+        interp_data_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), data_values)
         
-        # for row in range(irf_array.shape[0]):
-        #     for col in range(irf_array.shape[1]):
-        #         np.put(irf_array[row][col], range(len(irf_values)), irf_values)
+        # Cross correlate them
+        correlation_result = signal.correlate(interp_irf_values, interp_data_values)
+        
+        # shift found by taking middle index of cross correlation array
+        # and subtracing index of peak correlation
+        shift = ((correlation_result.shape[0] - 1) / 2) - np.where(correlation_result == max(correlation_result))[0][0]
+        
+        # shift and unscale to original time bins
+        shifted_irf_values = np.roll(interp_irf_values, int(shift))
+        final_irf_values = [shifted_irf_values[i] for i in range(0, max_bin, x_scale_factor)]
+        
+        irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
+        
+        for row in range(irf_array.shape[0]):
+            for col in range(irf_array.shape[1]):
+                np.put(irf_array[row][col], range(time_bins), final_irf_values)
                 
-        # tiff.imwrite("IRFs/tiff/" + file_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
+        tiff.imwrite("IRFs/tiff/" + file_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
                     
                     
     # mask entire image. Also masks each individual cell. Saves all as
@@ -109,7 +123,6 @@ class Pipeline:
                 
                 sdt_data = sdt_data[i]
                 nonempty_channel = i
-                print(nonempty_channel)
                 break
                     
         # save tif of original image
@@ -136,25 +149,25 @@ class Pipeline:
         tiff.imwrite(masked_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=self.imagej_meta)
         
-        # # split masked image into single cells
-        # cell_values= np.unique(mask)
-        # cell_values = cell_values[1:]
+        # split masked image into single cells
+        cell_values= np.unique(mask)
+        cell_values = cell_values[1:]
 
         
-        # # create image for every single cell
-        # for i in range(len(cell_values)):
-        #     # mask each cell
-        #     cell_image = np.copy(masked_image)
-        #     for row in range(mask.shape[0]):
-        #         for col in range(mask.shape[1]):
-        #             if mask[row][col] != cell_values[i]:
-        #                 cell_image[row][col][:] = 0
+        # create image for every single cell
+        for i in range(len(cell_values)):
+            # mask each cell
+            cell_image = np.copy(masked_image)
+            for row in range(mask.shape[0]):
+                for col in range(mask.shape[1]):
+                    if mask[row][col] != cell_values[i]:
+                        cell_image[row][col][:] = 0
                     
-        #     # save cell
-        #     file_path = image_name + "cell_" + str(cell_values[i])
+            # save cell
+            file_path = image_name + "cell_" + str(cell_values[i])
             
-        #     tiff.imwrite(masked_folder_path + file_path + ".tif", 
-        #                  self.__swap_time_axis(cell_image), metadata=self.imagej_meta)
+            tiff.imwrite(masked_folder_path + file_path + ".tif", 
+                          self.__swap_time_axis(cell_image), metadata=self.imagej_meta)
             
             
             
