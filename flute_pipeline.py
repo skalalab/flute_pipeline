@@ -17,27 +17,48 @@ import sdt_reader as sdt
 import matplotlib.pyplot as plt
 from scipy import signal
 
+# This class is the pipeline
 class Pipeline:
 
+    # creates all folders needed to run program, also sets time_axis for
+    # the pipeline
     def __init__(self, time):
         self.time_axis = time
         
         # create all folders needed
-        single_channel_folder = "TIFFs/Original"
+        sdt = "SDTs"
+        if not os.path.exists(sdt):
+            os.mkdir(sdt)
+            
+        mask = "Masks"
+        if not os.path.exists(mask):
+            os.mkdir(mask)
         
-        if not os.path.exists(single_channel_folder):
-            os.makedirs(single_channel_folder)
+        tiff_original = "TIFFs/Original"
+        if not os.path.exists(tiff_original):
+            os.makedirs(tiff_original)
         
-        masked_folder = "TIFFs/Masked"
-        
-        if not os.path.exists(masked_folder):
-            os.mkdir(masked_folder)
-                
-        # TODO: form actual metadata
-        # get .tif metadata for imagej
-        self.imagej_meta = {"ImageJ": "1.54f", "images": 256, "frames": 256, 
-                            "loop": False}
+        tiff_masked = "TIFFs/Masked"
+        if not os.path.exists(tiff_masked):
+            os.mkdir(tiff_masked)
+            
+        irf_txt = "IRFs/txt"
+        if not os.path.exists(irf_txt):
+            os.makedirs(irf_txt)
+            
+        irf_tiff = "IRFs/tiff"
+        if not os.path.exists(irf_tiff):
+            os.mkdir(irf_tiff)
 
+    # create metadata for an image of sdt data
+    #
+    # param: time_bins - number of time bins
+    # return: metadata - dict
+    def __generate_metadata(self, time_bins):
+        metadata = {"ImageJ": "1.54f", "images": time_bins, "frames": time_bins, 
+                            "loop": False}
+        
+        return metadata 
 
     # correct orientation and swap time axes of data
     #
@@ -52,9 +73,9 @@ class Pipeline:
     
     # generate max correlation shifted IRF for .tif image
     #
-    # param: file - txt file path
-    # param: rows - number of rows 
-    # param: cols - number of columns
+    # param: file_name - txt file path
+    # param: image_channel - the channel of .sdt that holds the nonempty image 
+    # param: image_data - the data of the .sdt
     def __generate_irf(self, file_name, image_channel, image_data):
         # get the irf values from .txt file
         if image_channel == 0:
@@ -69,7 +90,7 @@ class Pipeline:
         
         time_bins = len(irf_values)
         
-        # sum 3d image data into 256 time bins
+        # sum 3d image data into just time bins
         data_values = np.sum(image_data, 1)
         data_values = np.sum(data_values, 0)
         
@@ -94,15 +115,11 @@ class Pipeline:
 
         shift = max_corr[1]
         
-        
         # shift and unscale to original time bins
         shifted_irf_values = np.roll(interp_irf_values, int(shift))
         final_irf_values = [shifted_irf_values[i] for i in range(0, max_bin, x_scale_factor)]
         
-        test_corr = signal.correlate(shifted_irf_values, interp_data_values)
-        print(np.where(test_corr == max(test_corr))[0][0])
-        print(shift)
-        
+        # create shifted irf tiff        
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
         
         for row in range(irf_array.shape[0]):
@@ -114,9 +131,11 @@ class Pipeline:
                     
     # mask entire image. Also masks each individual cell. Saves all as
     # tiff files
+    #
+    # param: path - the mask .tiff file
     def mask_image(self, path):
         # create folder for all masked image and cells
-        image_name = path.name[:-22]
+        image_name = "_".join(path.name[:path.name.index(".tif")].split("_")[:-2])
         masked_folder_path = "TIFFs/Masked/" + image_name + "/"
         
         if not os.path.exists(masked_folder_path):
@@ -136,10 +155,13 @@ class Pipeline:
                 sdt_data = sdt_data[i]
                 nonempty_channel = i
                 break
+            
+        # generate metadata
+        metadata = self.__generate_metadata(sdt_data.shape[2])
                     
         # save tif of original image
         tiff.imwrite("TIFFs/Original/" + image_name +".tif", 
-                     self.__swap_time_axis(sdt_data), metadata=self.imagej_meta)
+                     self.__swap_time_axis(sdt_data), metadata=metadata)
         
         # now mask the image
         with tiff.TiffFile(path) as mask_tif:
@@ -156,11 +178,10 @@ class Pipeline:
         # save and make irf of masked image
         file_name = image_name + "masked_image"
         
-        print(nonempty_channel)
         self.__generate_irf(file_name, nonempty_channel, masked_image)
         
         tiff.imwrite(masked_folder_path + file_name + ".tif", 
-                     self.__swap_time_axis(masked_image), metadata=self.imagej_meta)
+                     self.__swap_time_axis(masked_image), metadata=metadata)
         
         # split masked image into single cells
         cell_values= np.unique(mask)
@@ -180,7 +201,7 @@ class Pipeline:
             file_path = image_name + "cell_" + str(cell_values[i])
             
             tiff.imwrite(masked_folder_path + file_path + ".tif", 
-                          self.__swap_time_axis(cell_image), metadata=self.imagej_meta)
+                          self.__swap_time_axis(cell_image), metadata=metadata)
             
             
             
