@@ -55,7 +55,7 @@ class Pipeline:
     # param: file - txt file path
     # param: rows - number of rows 
     # param: cols - number of columns
-    def generate_irf(self, file_name, image_channel, image_data):
+    def __generate_irf(self, file_name, image_channel, image_data):
         # get the irf values from .txt file
         if image_channel == 0:
             with open("IRFs/txt/Ch1_IRF_890.txt") as irf:
@@ -75,21 +75,33 @@ class Pipeline:
         
         # Interpolate 9 values bewteen each time bin (linear) of values
         x_scale_factor = 10
-        max_bin = (time_bins * x_scale_factor) - (x_scale_factor - 1)
+        max_bin = ((time_bins - 1) * x_scale_factor) + 1 # +1 to account for range()
         
         interp_irf_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), irf_values)
         interp_data_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), data_values)
         
-        # Cross correlate them
-        correlation_result = signal.correlate(interp_irf_values, interp_data_values)
+        # Cross correlate all shifts, find max amongst them
+        single_corr = signal.correlate(interp_irf_values, interp_data_values, mode = "valid")
+        max_corr = (single_corr, 0)
+
+        shifted = interp_irf_values
+        for i in range(1, max_bin):
+            shifted = np.roll(shifted, 1)
+            single_corr = signal.correlate(shifted, interp_data_values, mode = "valid")
+            
+            if single_corr > max_corr[0]:
+                max_corr = (single_corr, i)
+
+        shift = max_corr[1]
         
-        # shift found by taking middle index of cross correlation array
-        # and subtracing index of peak correlation
-        shift = ((correlation_result.shape[0] - 1) / 2) - np.where(correlation_result == max(correlation_result))[0][0]
         
         # shift and unscale to original time bins
         shifted_irf_values = np.roll(interp_irf_values, int(shift))
         final_irf_values = [shifted_irf_values[i] for i in range(0, max_bin, x_scale_factor)]
+        
+        test_corr = signal.correlate(shifted_irf_values, interp_data_values)
+        print(np.where(test_corr == max(test_corr))[0][0])
+        print(shift)
         
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
         
@@ -144,7 +156,8 @@ class Pipeline:
         # save and make irf of masked image
         file_name = image_name + "masked_image"
         
-        self.generate_irf(file_name, nonempty_channel, masked_image)
+        print(nonempty_channel)
+        self.__generate_irf(file_name, nonempty_channel, masked_image)
         
         tiff.imwrite(masked_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=self.imagej_meta)
