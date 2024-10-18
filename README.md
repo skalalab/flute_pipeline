@@ -1,9 +1,7 @@
 # FLUTE Pipeline
 ## Purpose
-TBD...
+FLUTE pipeline...
 ## Basic Overview
-1. FLIM image data in the form of *.sdt* files are inputted into our pipeline.
-2. The *.sdt* files are split and converted into single channel *.tif* files. Only the non-empty files are saved.
-3. User provided masks are applied onto corresponding *.tif* files and the new image is saved.
-4. Each individual cell in the masked image is saved as its own *.tif* file
-5. ...
+1. User imports FLIM images (.sdt), a mask for these images (.tiff), and IRF values (.txt).
+2.  Our pipeline masks the images and splits all cells. It also creates a shifted IRF .tif.
+3.  User can use these new files into for FLUTE visualization. 
