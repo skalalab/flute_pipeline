@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 import sdt_reader as sdt
 import matplotlib.pyplot as plt
-from scipy import signal
+from scipy import signal, ndimage
 import math
 
 # This class is the pipeline
@@ -106,26 +106,22 @@ class Pipeline:
         interp_irf_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), irf_values)
         interp_data_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), data_values)
         
-        # Cross correlate all shifts, find max amongst them
-        single_corr = signal.correlate(interp_irf_values, interp_data_values, mode = "valid")[0]
-        max_corr = (single_corr, 0)
-
-        shifted = interp_irf_values
-        for i in range(1, max_bin):
-            shifted = np.roll(shifted, 1)
-            single_corr = signal.correlate(shifted, interp_data_values, mode = "valid")[0]
-            
-            if single_corr > max_corr[0]:
-                max_corr = (single_corr, i)
-
-        shift = max_corr[1]
+        # Cross correlate them
+        corr_result = signal.correlate(interp_irf_values, interp_data_values)
+      
+        # shift found by taking middle index of cross correlation array
+        # and subtracing index of peak correlation
+        shift = (max_bin - 1) - np.where(corr_result == max(corr_result))[0][0]
         
-        # shift and unscale to original time bins
-        shifted_irf_values = np.roll(interp_irf_values, int(shift))
+        # shift and unscale irf values
+        shifted_irf_values = ndimage.shift(interp_irf_values, shift)
         final_irf_values = [shifted_irf_values[i] for i in range(0, max_bin, x_scale_factor)]
         
-        single_corr = signal.correlate(shifted_irf_values, interp_data_values, mode = "valid")[0]
-        test_corr = signal.correlate(interp_irf_values, interp_data_values)
+        # single_corr = signal.correlate(shifted_irf_values, interp_data_values, mode = "valid")[0]
+        # prev_corr = signal.correlate(interp_irf_values, interp_data_values)
+        # print(np.where(prev_corr == max(prev_corr))[0][0])
+        # new_corr = signal.correlate(shifted_irf_values, interp_data_values)
+        # print(np.where(new_corr == max(new_corr))[0][0])
 
         # create shifted irf tiff        
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
