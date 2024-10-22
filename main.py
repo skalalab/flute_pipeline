@@ -20,6 +20,3 @@ pipeline = pipeline.Pipeline(time_axis)
 mask_paths = [path for path in Path("Masks").iterdir()]
 for path in mask_paths:
     pipeline.mask_image(path)
-    
-
-visualizer = visualizer.Visualizer(time_axis)

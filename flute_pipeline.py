@@ -14,9 +14,9 @@ import numpy as np
 from pathlib import Path
 import os
 import sdt_reader as sdt
-import matplotlib.pyplot as plt
-from scipy import signal, ndimage
-import math
+from scipy import signal
+import flute_pipeline_visualizer as visualizer
+
 
 # This class is the pipeline
 class Pipeline:
@@ -65,9 +65,10 @@ class Pipeline:
         
         return metadata 
 
-    # correct orientation and swap time axes of data
+    # swap time axes of data
     #
-    # param: data - 3d array to be correct
+    # param: data - 3d array to swap
+    # return: time swapped array
     def __swap_time_axis(self, data):
         data = np.swapaxes(data, self.time_axis, 2)
         
@@ -75,6 +76,45 @@ class Pipeline:
             data = np.swapaxes(data, 1, 2)
             
         return data
+    
+    # zero padding shift
+    #
+    # param: shift - amount to shift
+    # param: array - array to be shifted
+    # return: shifted array
+    def __shift(self, array, shift):
+        if (shift > 0):
+            shifted = np.concatenate([np.zeros(shift), array[:-shift]])
+        elif (shift < 0):
+            shifted = np.concatenate([array[shift:], np.zeros(-shift)])
+        else:
+            shifted = array
+            
+        return shifted
+    
+    # shift irf by findning where peaks align with data
+    #
+    # param: irf - array to shift
+    # param: data - array to be compare irf with
+    # param: return_array - return array or shift value
+    # return: shift if specifeid
+    # return: shifted irf if specified
+    def __correlate_max_peak(self, irf, data, return_array = False):
+        # get max indexes
+        irf_max_index = np.where(irf == max(irf))[0][0]
+        data_max_index = np.where(data == max(data))[0][0]
+        
+        print(irf_max_index)
+        print(data_max_index)
+        
+        # shift
+        shift = data_max_index - irf_max_index
+        
+        if return_array is True:
+            return self.__shift(irf, shift)
+        
+        return shift
+            
     
     # generate max correlation shifted IRF for .tif image
     #
@@ -98,31 +138,31 @@ class Pipeline:
         # sum 3d image data into just time bins
         data_values = np.sum(image_data, 1)
         data_values = np.sum(data_values, 0)
-        
+                
         # Interpolate 9 values bewteen each time bin (linear) of values
         x_scale_factor = 10
-        max_bin = ((time_bins - 1) * x_scale_factor) + 1 # +1 to account for range()
+        scaled_bins = ((time_bins - 1) * x_scale_factor) + 1 # +1 to account for range()
         
-        interp_irf_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), irf_values)
-        interp_data_values = np.interp(range(max_bin), range(0, max_bin, x_scale_factor), data_values)
-        
+        interp_irf_values = np.interp(range(scaled_bins), range(0, scaled_bins, x_scale_factor), irf_values)
+        interp_data_values = np.interp(range(scaled_bins), range(0, scaled_bins, x_scale_factor), data_values)
+
         # Cross correlate them
         corr_result = signal.correlate(interp_irf_values, interp_data_values)
       
         # shift found by taking middle index of cross correlation array
         # and subtracing index of peak correlation
-        shift = (max_bin - 1) - np.where(corr_result == max(corr_result))[0][0]
+        shift = (scaled_bins - 1) - np.where(corr_result == max(corr_result))[0][0]
         
         # shift and unscale irf values
-        shifted_irf_values = ndimage.shift(interp_irf_values, shift)
-        final_irf_values = [shifted_irf_values[i] for i in range(0, max_bin, x_scale_factor)]
+        shifted_irf_values = self.__shift(interp_irf_values, shift)
+        peak_shift = self.__correlate_max_peak(interp_irf_values, interp_data_values, return_array = True)
+ 
+        visualizer.plot_irf_data(interp_irf_values, interp_data_values, "before")
+        visualizer.plot_irf_data(shifted_irf_values, interp_data_values, "correlate: after")
+        visualizer.plot_irf_data(peak_shift, interp_data_values, "peak: after")
+    
+        final_irf_values = [shifted_irf_values[i] for i in range(0, scaled_bins, x_scale_factor)]
         
-        # single_corr = signal.correlate(shifted_irf_values, interp_data_values, mode = "valid")[0]
-        # prev_corr = signal.correlate(interp_irf_values, interp_data_values)
-        # print(np.where(prev_corr == max(prev_corr))[0][0])
-        # new_corr = signal.correlate(shifted_irf_values, interp_data_values)
-        # print(np.where(new_corr == max(new_corr))[0][0])
-
         # create shifted irf tiff        
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
         
@@ -187,25 +227,25 @@ class Pipeline:
         tiff.imwrite(masked_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
         
-        # # split masked image into single cells
-        # cell_values= np.unique(mask)
-        # cell_values = cell_values[1:]
+        # split masked image into single cells
+        cell_values= np.unique(mask)
+        cell_values = cell_values[1:]
 
         
-        # # create image for every single cell
-        # for i in range(len(cell_values)):
-        #     # mask each cell
-        #     cell_image = np.copy(masked_image)
-        #     for row in range(mask.shape[0]):
-        #         for col in range(mask.shape[1]):
-        #             if mask[row][col] != cell_values[i]:
-        #                 cell_image[row][col][:] = 0
+        # create image for every single cell
+        for i in range(len(cell_values)):
+            # mask each cell
+            cell_image = np.copy(masked_image)
+            for row in range(mask.shape[0]):
+                for col in range(mask.shape[1]):
+                    if mask[row][col] != cell_values[i]:
+                        cell_image[row][col][:] = 0
                     
-        #     # save cell
-        #     file_path = image_name + "cell_" + str(cell_values[i])
+            # save cell
+            file_path = image_name + "cell_" + str(cell_values[i])
             
-        #     tiff.imwrite(masked_folder_path + file_path + ".tif", 
-        #                   self.__swap_time_axis(cell_image), metadata=metadata)
+            tiff.imwrite(masked_folder_path + file_path + ".tif", 
+                          self.__swap_time_axis(cell_image), metadata=metadata)
             
             
             
