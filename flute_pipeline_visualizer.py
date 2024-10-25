@@ -26,10 +26,8 @@ def plot_irf_data(irf, data, title):
 # param: gs_coords - iterable collection of (G,S) value in np array form
 def plot_phasor(gs_coords):
     # frame
-    f = 0.050   # laser repetition rate in [GHz]
-    w = 2*np.pi*f
-    bin_width = 100
-
+    f = 0.080   # laser repetition rate in [GHz]
+    print(len(gs_coords))
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_xlim([-0.05, 1.05])

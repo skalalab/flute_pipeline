@@ -89,27 +89,7 @@ class Pipeline:
             shifted = array
             
         return shifted
-    
-    # shift irf by findning where peaks align with data
-    #
-    # param: irf - array to shift
-    # param: data - array to be compare irf with
-    # param: return_array - return array or shift value
-    # return: shift if specifeid
-    # return: shifted irf if specified
-    def __correlate_max_peak(self, irf, data, return_array = False):
-        # get max indexes
-        irf_max_index = np.where(irf == max(irf))[0][0]
-        data_max_index = np.where(data == max(data))[0][0]
-        
-        # shift
-        shift = data_max_index - irf_max_index
-        
-        if return_array is True:
-            return self.__shift(irf, shift)
-        
-        return shift
-            
+          
     
     # generate max correlation shifted IRF for .tif image
     #
@@ -151,13 +131,6 @@ class Pipeline:
         # shift and unscale irf values
         shifted_irf_values = self.__shift(interp_irf_values, shift)
         final_irf_values = [shifted_irf_values[i] for i in range(0, scaled_bins, x_scale_factor)]
-
-
-        # compare and visualize    
-        # peak_shift = self.__correlate_max_peak(interp_irf_values, interp_data_values, return_array = True)
-        # visualizer.plot_irf_data(interp_irf_values, interp_data_values, "before")
-        # visualizer.plot_irf_data(shifted_irf_values, interp_data_values, "correlate: after")
-        # visualizer.plot_irf_data(peak_shift, interp_data_values, "peak: after")
             
         # create shifted irf tiff        
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
@@ -167,6 +140,8 @@ class Pipeline:
                 np.put(irf_array[row][col], range(time_bins), final_irf_values)
                 
         tiff.imwrite("IRFs/tiff/" + file_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
+        
+        return final_irf_values
                     
                     
     # mask entire image. Also masks each individual cell. Saves all as
@@ -224,7 +199,7 @@ class Pipeline:
         # save and make irf of masked image
         file_name = image_name + "masked_image"
         
-        self.__generate_irf(file_name, nonempty_channel, masked_image)
+        IRF_decay = self.__generate_irf(file_name, nonempty_channel, masked_image)
         
         tiff.imwrite(image_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
@@ -252,63 +227,112 @@ class Pipeline:
             
         # plot phasor
         print("Masking Completed!")
-        self.plot_cell_phasor(cell_images)
+        
+        # same = True
+        # for cell in cell_images:
+        #     m1 = self.__cell_average_GS(cell, IRF_decay)
+        #     m2 = self.__get_GS(np.sum(np.sum(cell, 0), 0), IRF_decay)
             
+        #     if not str(m1[0]).split(".")[1][:5] == str(m2[0]).split(".")[1][:5]:
+        #         same = False
+                
+        #     if not str(m1[1]).split(".")[1][:5] == str(m2[1]).split(".")[1][:5]:
+        #         same = False
+            
+        # print(same)
+        
+        self.plot_cell_phasor(cell_images, IRF_decay)
+        
+              
     # calculate the (G,S) coordinates of pixel
     #
-    # param: x - x coordinate
-    # param: y - y coordinate
-    # param: intensity - intensity value of coordinate
-    # return: (G,S) in numpy array form
-    def __get_GS(self, x, y, intensity):
-        # for now random
-        return np.array([random.uniform(0, 1), random.uniform(0, 0.5)])
-                
-    # calculate the weighted average (G,S) coordinate of cell
-    #
-    # param: cell - 2D intensity image array of cell
-    # return: the weighted average (G,S) coordinate of cell
-    def __cell_average_GS(self, cell):
-        dividend = 0
-        divisor = 0
+    def __get_GS(self, cell_hist, IRF_decay):
+        f = 0.080   # laser repetition rate in [GHz]
+        w = 2*np.pi*f
+        time_axis = np.arange(0, 1/f, 1/f/256)
+        G_IRF = np.dot(np.transpose(IRF_decay) , np.cos(w*time_axis)) / np.sum(IRF_decay)
+        S_IRF = np.dot(np.transpose(IRF_decay) , np.sin(w*time_axis)) / np.sum(IRF_decay)
+        cos_coeff = np.cos(w*time_axis)
+        sin_coeff = np.sin(w*time_axis)
         
-        # calculate every (G,S) coordinate for nonzero pixel and return average
-        for y in range(cell.shape[0]):
-            for x in range(cell.shape[1]):
-                if cell[y,x] != 0:
-                    dividend += cell[y,x] * self.__get_GS(x, y, cell[y,x])
-                    divisor += cell[y,x]
-                
-        return dividend / divisor
+        # corrected coefficients
+        corrected_cos_coeff = (G_IRF/(G_IRF**2 + S_IRF**2))*cos_coeff + (S_IRF/(G_IRF**2 + S_IRF**2))*sin_coeff
+        corrected_sin_coeff = (-S_IRF/(G_IRF**2 + S_IRF**2))*cos_coeff + (G_IRF/(G_IRF**2 + S_IRF**2))*sin_coeff
+        
+        # cell_hist is the summed histograms of a cell: it can also be a pixel
+        cell_hist_sum = np.sum(cell_hist)
+        G_decay = np.dot(cell_hist, corrected_cos_coeff) / cell_hist_sum
+        S_decay = np.dot(cell_hist, corrected_sin_coeff) / cell_hist_sum
+        
+        return np.array([G_decay, S_decay])
 
     # plots cell level phasor
     #
-    # param: cells - iterable colletion of 3D cell array
-    def plot_cell_phasor(self, cells):
+    # param: cells - iterable collection of 3D cell array
+    def plot_cell_phasor(self, cells, IRF_decay):
         # get cell (G,S) for each cell
         coords = list()
         for cell in cells:
-            coords.append(self.__cell_average_GS(np.sum(cell, 2)))
+            # get cell_hist
+            cell_hist = np.sum(cell, 0)
+            cell_hist = np.sum(cell_hist, 0)
+            
+            coords.append(self.__get_GS(cell_hist, IRF_decay))
             
         # plot
         visualizer.plot_phasor(coords)    
 
 
-    # # potentially useless
-    # def plot_pixel_phasor(self, image):
-    #     with tiff.TiffFile(image) as tif:
-    #         data = np.sum(tif.asarray(), 0)
-            
-    #     coords = list()
-    #     for y in range(data.shape[0]):
-    #         for x in range(data.shape[1]):
-    #             if data[y,x] != 0:
-    #                 coords.append(self.__get_GS(x, y, data[y,x]))
+    # testing purposese only
+    def plot_pixel_phasor(self, image, IRF_decay):
+        coords = list()
+        for row in range(image.shape[0]):
+            for col in range(image.shape[1]):
+                if np.count_nonzero(image[row,col]) != 0:
+                    coords.append(self.__get_GS(image[row,col], IRF_decay))
                 
-    #     visualizer.plot_phasor(coords)
+        visualizer.plot_phasor(coords)
             
+    # # testing purposes only
+    # def __correlate_max_peak(self, irf, data, return_array = False):
+    #     # get max indexes
+    #     irf_max_index = np.where(irf == max(irf))[0][0]
+    #     data_max_index = np.where(data == max(data))[0][0]
+        
+    #     # shift
+    #     shift = data_max_index - irf_max_index
+        
+    #     if return_array is True:
+    #         return self.__shift(irf, shift)
+        
+    #     return shift
+    
+    # # old method
+    # def __cell_average_GS(self, cell, IRF_decay):
+    #     weighted_gs_sum = 0
+    #     intensity_sum = 0
+        
+    #     # calculate every (G,S) coordinate for nonzero pixel and return average
+    #     for row in range(cell.shape[0]):
+    #         for col in range(cell.shape[1]):
+    #             if np.count_nonzero(cell[row,col]) != 0:
+    #                 intensity = np.sum(cell[row,col])
+    #                 weighted_gs_sum += intensity * self.__get_GS(cell[row,col], IRF_decay)
+    #                 intensity_sum += intensity
+                
+    #     return weighted_gs_sum / intensity_sum
 
 
-
+    # # plots cell level phasor
+    # #
+    # # param: cells - iterable colletion of 3D cell array
+    # def plot_cell_phasor(self, cells, IRF_decay):
+    #     # get cell (G,S) for each cell
+    #     coords = list()
+    #     for cell in cells:
+    #         coords.append(self.__cell_average_GS(cell, IRF_decay))
+            
+    #     # plot
+    #     visualizer.plot_phasor(coords)
 
 
