@@ -13,10 +13,8 @@ from pathlib import Path
 
 
 # Run
-time_axis = 0
-
-pipeline = pipeline.Pipeline(time_axis)
+pipeline = pipeline.Pipeline()
 
 mask_paths = [path for path in Path("Masks").iterdir()]
-for path in mask_paths:
-    pipeline.mask_image(path)
+
+pipeline.mask_image(mask_paths[0])  

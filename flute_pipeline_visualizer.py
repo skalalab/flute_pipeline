@@ -2,7 +2,7 @@
 """
 Created on Fri Oct 11 15:45:30 2024
 
-@author: Chris Yang
+@author: Wenxuan Zhao, Chris Yang
 
 visualizes the flute_pipeline outputs
 """
@@ -13,12 +13,48 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import sdt_reader as sdt
 
+# plots irf values against data values
 def plot_irf_data(irf, data, title):
     plt.plot(irf / max(irf), label = "irf")
     plt.plot(data / max(data), label = "data")
     plt.legend()
     plt.title(title)
     plt.show()
+    
+# plot a phasor plot
+#
+# param: gs_coords - iterable collection of (G,S) value in np array form
+def plot_phasor(gs_coords):
+    # frame
+    f = 0.050   # laser repetition rate in [GHz]
+    w = 2*np.pi*f
+    bin_width = 100
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 0.55])
+    u = np.arange(0, 100, 0.01)
+    ax.plot(1/(1+u**2), u/(1+u**2), c='k', picker=True)
+    wt = 2*np.pi*f*np.array([0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],dtype=float)
+    ax.scatter(1/(1+wt**2), wt/(1+wt**2), s=50, c='k', marker="o", picker=True)
+    # ln = ax.scatter(0, 0, s=50, c='r', marker="o", animated=True)  # animated=True tells matplotlib to only draw the artist when we explicitly request it
+    # Lifetime labels
+    ax.annotate('0.5 ns', xy=(0.985, 0.16), fontsize=6)
+    ax.annotate('1 ns', xy=(0.92, 0.30), fontsize=6)
+    ax.annotate('2 ns', xy=(0.72, 0.47), fontsize=6)
+    ax.annotate('3 ns', xy=(0.52, 0.515), fontsize=6)
+    ax.annotate('4 ns', xy=(0.372, 0.505), fontsize=6)
+    ax.annotate('5 ns', xy=(0.27, 0.475), fontsize=6)
+    
+    # datat points
+    g = [gs[0] for gs in gs_coords]
+    s = [gs[1] for gs in gs_coords]
+    
+    plt.scatter(g, s)
+    
+    plt.show()
+
 
 # # intensity graph of individual channel of sdt file
 # #

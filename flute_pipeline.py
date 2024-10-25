@@ -16,20 +16,14 @@ import os
 import sdt_reader as sdt
 from scipy import signal
 import flute_pipeline_visualizer as visualizer
+import random
 
 
 # This class is the pipeline
 class Pipeline:
-
-    # creates all folders needed to run program, also sets time_axis for
-    # the pipeline
-    def __init__(self, time):
-        # invalid time axis
-        if (time < 0 or time > 2):
-            raise Exception("Time must be from 0-2")
-        
-        self.time_axis = time
-        
+    
+    # creates all folders needed to run program
+    def __init__(self):        
         # create all folders needed
         sdt = "SDTs"
         if not os.path.exists(sdt):
@@ -57,23 +51,27 @@ class Pipeline:
 
     # create metadata for an image of sdt data
     #
-    # param: time_bins - number of time bins
+    # param: time_bins - number of time bins, greater than 0
     # return: metadata - dict
     def __generate_metadata(self, time_bins):
+        if time_bins < 1:
+            raise Exception("time_bins must be above 0")
+        
         metadata = {"ImageJ": "1.54f", "images": time_bins, "frames": time_bins, 
                             "loop": False}
         
         return metadata 
 
-    # swap time axes of data
+    # swap time axes of data to 0 
     #
-    # param: data - 3d array to swap
+    # param: data - (rows, cols, time) array
     # return: time swapped array
     def __swap_time_axis(self, data):
-        data = np.swapaxes(data, self.time_axis, 2)
+        if data.ndim > 3:
+            raise Exception("data must be 3D")
         
-        if (self.time_axis == 0):
-            data = np.swapaxes(data, 1, 2)
+        data = np.swapaxes(data, 0, 2)
+        data = np.swapaxes(data, 1, 2)
             
         return data
     
@@ -103,9 +101,6 @@ class Pipeline:
         # get max indexes
         irf_max_index = np.where(irf == max(irf))[0][0]
         data_max_index = np.where(data == max(data))[0][0]
-        
-        print(irf_max_index)
-        print(data_max_index)
         
         # shift
         shift = data_max_index - irf_max_index
@@ -155,14 +150,15 @@ class Pipeline:
         
         # shift and unscale irf values
         shifted_irf_values = self.__shift(interp_irf_values, shift)
-        peak_shift = self.__correlate_max_peak(interp_irf_values, interp_data_values, return_array = True)
- 
-        visualizer.plot_irf_data(interp_irf_values, interp_data_values, "before")
-        visualizer.plot_irf_data(shifted_irf_values, interp_data_values, "correlate: after")
-        visualizer.plot_irf_data(peak_shift, interp_data_values, "peak: after")
-    
         final_irf_values = [shifted_irf_values[i] for i in range(0, scaled_bins, x_scale_factor)]
-        
+
+
+        # compare and visualize    
+        # peak_shift = self.__correlate_max_peak(interp_irf_values, interp_data_values, return_array = True)
+        # visualizer.plot_irf_data(interp_irf_values, interp_data_values, "before")
+        # visualizer.plot_irf_data(shifted_irf_values, interp_data_values, "correlate: after")
+        # visualizer.plot_irf_data(peak_shift, interp_data_values, "peak: after")
+            
         # create shifted irf tiff        
         irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
         
@@ -178,12 +174,18 @@ class Pipeline:
     #
     # param: path - the mask .tiff file
     def mask_image(self, path):
-        # create folder for all masked image and cells
+        # create folders for all masked image and cells
         image_name = "_".join(path.name[:path.name.index(".tif")].split("_")[:-2])
-        masked_folder_path = "TIFFs/Masked/" + image_name + "/"
         
-        if not os.path.exists(masked_folder_path):
-            os.mkdir(masked_folder_path)
+        image_folder_path = "TIFFs/Masked/" + image_name + "/Image/"
+        if not os.path.exists(image_folder_path):
+            os.makedirs(image_folder_path)
+            
+        cell_folder_path = "TIFFs/Masked/" + image_name + "/Cell/"
+        if not os.path.exists(cell_folder_path):
+            os.mkdir(cell_folder_path)
+        
+        
         
         # get image from corresponding .sdt file
         sdt_path = Path("SDTs/" + image_name + ".sdt")
@@ -224,15 +226,15 @@ class Pipeline:
         
         self.__generate_irf(file_name, nonempty_channel, masked_image)
         
-        tiff.imwrite(masked_folder_path + file_name + ".tif", 
+        tiff.imwrite(image_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
         
         # split masked image into single cells
         cell_values= np.unique(mask)
         cell_values = cell_values[1:]
 
-        
         # create image for every single cell
+        cell_images = list()
         for i in range(len(cell_values)):
             # mask each cell
             cell_image = np.copy(masked_image)
@@ -243,11 +245,67 @@ class Pipeline:
                     
             # save cell
             file_path = image_name + "cell_" + str(cell_values[i])
-            
-            tiff.imwrite(masked_folder_path + file_path + ".tif", 
+            cell_images.append(cell_image)
+            tiff.imwrite(cell_folder_path + file_path + ".tif", 
                           self.__swap_time_axis(cell_image), metadata=metadata)
             
             
+        # plot phasor
+        print("Masking Completed!")
+        self.plot_cell_phasor(cell_images)
+            
+    # calculate the (G,S) coordinates of pixel
+    #
+    # param: x - x coordinate
+    # param: y - y coordinate
+    # param: intensity - intensity value of coordinate
+    # return: (G,S) in numpy array form
+    def __get_GS(self, x, y, intensity):
+        # for now random
+        return np.array([random.uniform(0, 1), random.uniform(0, 0.5)])
+                
+    # calculate the weighted average (G,S) coordinate of cell
+    #
+    # param: cell - 2D intensity image array of cell
+    # return: the weighted average (G,S) coordinate of cell
+    def __cell_average_GS(self, cell):
+        dividend = 0
+        divisor = 0
+        
+        # calculate every (G,S) coordinate for nonzero pixel and return average
+        for y in range(cell.shape[0]):
+            for x in range(cell.shape[1]):
+                if cell[y,x] != 0:
+                    dividend += cell[y,x] * self.__get_GS(x, y, cell[y,x])
+                    divisor += cell[y,x]
+                
+        return dividend / divisor
+
+    # plots cell level phasor
+    #
+    # param: cells - iterable colletion of 3D cell array
+    def plot_cell_phasor(self, cells):
+        # get cell (G,S) for each cell
+        coords = list()
+        for cell in cells:
+            coords.append(self.__cell_average_GS(np.sum(cell, 2)))
+            
+        # plot
+        visualizer.plot_phasor(coords)    
+
+
+    # # potentially useless
+    # def plot_pixel_phasor(self, image):
+    #     with tiff.TiffFile(image) as tif:
+    #         data = np.sum(tif.asarray(), 0)
+            
+    #     coords = list()
+    #     for y in range(data.shape[0]):
+    #         for x in range(data.shape[1]):
+    #             if data[y,x] != 0:
+    #                 coords.append(self.__get_GS(x, y, data[y,x]))
+                
+    #     visualizer.plot_phasor(coords)
             
 
 
