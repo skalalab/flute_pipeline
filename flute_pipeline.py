@@ -65,7 +65,7 @@ class Pipeline:
     # swap time axes of data to 0 
     #
     # param: data - (rows, cols, time) array
-    # return: time swapped array
+    # return: time swapped view of array
     def __swap_time_axis(self, data):
         if data.ndim > 3:
             raise Exception("data must be 3D")
@@ -81,14 +81,16 @@ class Pipeline:
     # param: array - array to be shifted
     # return: shifted array
     def __shift(self, array, shift):
+        data_type = array.dtype
+        
         if (shift > 0):
             shifted = np.concatenate([np.zeros(shift), array[:-shift]])
         elif (shift < 0):
-            shifted = np.concatenate([array[shift:], np.zeros(-shift)])
+            shifted = np.concatenate([array[-shift:], np.zeros(-shift)])
         else:
-            shifted = array
+            shifted = np.copy(array)
             
-        return shifted
+        return shifted.astype(data_type)
           
     
     # generate max correlation shifted IRF for .tif image
@@ -226,7 +228,7 @@ class Pipeline:
             
             
         # plot phasor
-        print("Masking Completed!")
+        self.plot_cell_phasor(cell_images, IRF_decay)
         
         # same = True
         # for cell in cell_images:
@@ -240,9 +242,7 @@ class Pipeline:
         #         same = False
             
         # print(same)
-        
-        self.plot_cell_phasor(cell_images, IRF_decay)
-        
+                
               
     # calculate the (G,S) coordinates of pixel
     #

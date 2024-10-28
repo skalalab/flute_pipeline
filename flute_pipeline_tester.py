@@ -124,8 +124,122 @@ def test_swap_time_axis():
 #
 # return: False if bad
 def test_shift():
+    # setup array and pipeline
+    testline = pipeline.Pipeline()
+    test_array = np.array([1, 2, 5, 2, 1])
+    
+    # shift by 0
+    expected = np.array([1, 2, 5, 2, 1])
+    actual = testline._Pipeline__shift(test_array, 0)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by -1
+    expected = np.array([2, 5, 2, 1, 0])
+    actual = testline._Pipeline__shift(test_array, -1)
+
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by 1
+    expected = np.array([0, 1, 2, 5, 2])
+    actual = testline._Pipeline__shift(test_array, 1)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by 3
+    expected = np.array([0, 0, 0, 1, 2])
+    actual = testline._Pipeline__shift(test_array, 3)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by -3
+    expected = np.array([2, 1, 0, 0, 0])
+    actual = testline._Pipeline__shift(test_array, -3)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by 5
+    expected = np.array([0, 0, 0, 0, 0])
+    actual = testline._Pipeline__shift(test_array, 5)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by -5
+    expected = np.array([0, 0, 0, 0, 0])
+    actual = testline._Pipeline__shift(test_array, -5)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by 6
+    expected = np.array([0, 0, 0, 0, 0, 0])
+    actual = testline._Pipeline__shift(test_array, 6)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # shift by -6
+    expected = np.array([0, 0, 0, 0, 0, 0])
+    actual = testline._Pipeline__shift(test_array, -6)
+    
+    if (actual.__array_interface__["data"][0] == expected.__array_interface__["data"][0]):
+        return False
+    
+    if not np.array_equal(expected, actual):
+        return False
+    
+    # test int array returns int array
+    result = testline._Pipeline__shift(test_array, 2)
+    
+    if result.dtype != np.int32:
+        return False
+    
+    # test float array reurns float
+    test_array = np.array([1.52, 2.42, 504.2, 24442.55])
+    result = testline._Pipeline__shift(test_array, 2)
+    
+    if result.dtype != np.float64:
+        return False
+    
+    # test bool array returns bool
+    test_array = np.array([False, True, False, False])
+    result = testline._Pipeline__shift(test_array, 2)
+    
+    if result.dtype != np.bool_:
+        return False
+    
     # all good
-    return False
+    return True
 
 # output "pass" or "fail" depending on if function passed or failed
 #
@@ -140,6 +254,7 @@ def pass_fail(function):
 print("test_init(): " + pass_fail(test_init))    
 print("test_generate_metadata(): " + pass_fail(test_generate_metadata))
 print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
+print("test_shift(): " + pass_fail(test_shift))
 
 
 
