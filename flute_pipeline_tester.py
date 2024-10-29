@@ -81,6 +81,7 @@ def test_generate_metadata():
     # all good
     return True
 
+
 # tests swap_time_axis()
 #
 # return: false if bad
@@ -241,6 +242,154 @@ def test_shift():
     # all good
     return True
 
+
+# test generate_irf() function
+# 
+# return: False if bad
+def test_generate_irf():
+    testline = pipeline.Pipeline()
+    
+    # number of irf values less than time bins
+    data = np.empty((4,4,25))
+    
+    exception = False
+    try:
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data)
+    except:
+       exception = True
+       
+    if not exception:
+        return False
+    
+    # number of irf values more than time bins
+    data = np.empty((4,4,23))
+    
+    exception = False
+    try:
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data)
+    except:
+       exception = True
+       
+    if not exception:
+        return False
+    
+    # text has whitespace
+    data = np.empty((4,4,6))
+    
+    try:
+        testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data)
+    except:
+        return False
+        
+    # positive shift
+    values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
+    
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data)
+    
+    # check tif
+    with tiff.TiffFile("IRFs/tiff/positiveirf.tif") as tif:
+        actual_tif = tif.asarray()
+        
+    if actual_tif.dtype != np.float32:
+        return False
+    
+    if actual_tif.shape != (24, 4, 4):
+        return False
+    
+    for row in range(data.shape[0]):
+        for col in range(data.shape[1]):
+            for t in range(data.shape[2]):
+                if actual_tif[t, row, col] != data[row, col, t]:
+                    return False
+    
+    actual_tif = np.swapaxes(actual_tif, 0, 2)
+    actual_tif = np.swapaxes(actual_tif, 0, 1)
+    
+    if not np.array_equal(actual_tif, data):
+        return False
+        
+    # check return values
+    if list(actual_values) != values:
+        return False
+    
+    if actual_values.dtype != np.float32:
+        return False
+    
+    # negative shift
+    values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
+    
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data)
+    
+    # check tif
+    with tiff.TiffFile("IRFs/tiff/negativeirf.tif") as tif:
+        actual_tif = tif.asarray()
+        
+    if actual_tif.dtype != np.float32:
+        return False
+    
+    if actual_tif.shape != (24, 4, 4):
+        return False
+    
+    for row in range(data.shape[0]):
+        for col in range(data.shape[1]):
+            for t in range(data.shape[2]):
+                if actual_tif[t, row, col] != data[row, col, t]:
+                    return False
+    
+    actual_tif = np.swapaxes(actual_tif, 0, 2)
+    actual_tif = np.swapaxes(actual_tif, 0, 1)
+    
+    if not np.array_equal(actual_tif, data):
+        return False
+        
+    # check return values
+    if list(actual_values) != values:
+        return False
+    
+    if actual_values.dtype != np.float32:
+        return False
+    
+    # no shift
+    values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
+    
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data)
+    
+    # check tif
+    with tiff.TiffFile("IRFs/tiff/noirf.tif") as tif:
+        actual_tif = tif.asarray()
+        
+    if actual_tif.dtype != np.float32:
+        return False
+    
+    if actual_tif.shape != (24, 4, 4):
+        return False
+    
+    for row in range(data.shape[0]):
+        for col in range(data.shape[1]):
+            for t in range(data.shape[2]):
+                if actual_tif[t, row, col] != data[row, col, t]:
+                    return False
+    
+    actual_tif = np.swapaxes(actual_tif, 0, 2)
+    actual_tif = np.swapaxes(actual_tif, 0, 1)
+    
+    if not np.array_equal(actual_tif, data):
+        return False
+        
+    # check return values
+    if list(actual_values) != values:
+        return False
+    
+    if actual_values.dtype != np.float32:
+        return False
+    
+    # all good
+    return True
+
+
 # output "pass" or "fail" depending on if function passed or failed
 #
 # param: function - function
@@ -251,10 +400,12 @@ def pass_fail(function):
 
 #=======================================================================================
 
+# do the tests
 print("test_init(): " + pass_fail(test_init))    
 print("test_generate_metadata(): " + pass_fail(test_generate_metadata))
 print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))
+print("test_generate_irf(): " + pass_fail(test_generate_irf))
 
 
 

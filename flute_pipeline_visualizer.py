@@ -45,12 +45,12 @@ def plot_phasor(gs_coords):
     ax.annotate('4 ns', xy=(0.372, 0.505), fontsize=6)
     ax.annotate('5 ns', xy=(0.27, 0.475), fontsize=6)
     
-    # datat points
+    # data points
     g = [gs[0] for gs in gs_coords]
     s = [gs[1] for gs in gs_coords]
     
+    # plot
     plt.scatter(g, s)
-    
     plt.show()
 
 

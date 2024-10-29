@@ -93,20 +93,17 @@ class Pipeline:
         return shifted.astype(data_type)
           
     
-    # generate max correlation shifted IRF for .tif image
+    # shift IRF to max correlation with data. Then, make .tif of the IRF
     #
-    # param: file_name - txt file path
-    # param: image_channel - the channel of .sdt that holds the nonempty image 
+    # param: irf_path - path of irf to shift
+    # param: image_name - name of image of data
     # param: image_data - the data of the .sdt
-    def __generate_irf(self, file_name, image_channel, image_data):
-        # get the irf values from .txt file
-        if image_channel == 0:
-            with open("IRFs/txt/Ch1_IRF_890.txt") as irf:
-                irf_values = [int(line) for line in irf if line != "\n"]
-        else:
-            with open("IRFs/txt/Ch2_IRF_750.txt") as irf:
-                irf_values = [int(line) for line in irf if line != "\n"]
-                
+    # return: the shifted irf values
+    def __generate_irf(self, irf_path, image_name, image_data):
+        # get the irf values from .txt file 
+        with open(irf_path) as irf:
+            irf_values = [int(line) for line in irf if line.strip()]
+           
         if len(irf_values) != image_data.shape[2]:
             raise Exception("Number of IRF values don't match time bins")
         
@@ -135,15 +132,16 @@ class Pipeline:
         final_irf_values = [shifted_irf_values[i] for i in range(0, scaled_bins, x_scale_factor)]
             
         # create shifted irf tiff        
-        irf_array = np.empty((image_data.shape[0], image_data.shape[1], time_bins), dtype=np.float32)
+        irf_array = np.empty(image_data.shape, dtype=np.float32)
         
         for row in range(irf_array.shape[0]):
             for col in range(irf_array.shape[1]):
                 np.put(irf_array[row][col], range(time_bins), final_irf_values)
                 
-        tiff.imwrite("IRFs/tiff/" + file_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
+        tiff.imwrite("IRFs/tiff/" + image_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
         
-        return final_irf_values
+        # return the shifted irf values
+        return np.array(final_irf_values, np.float32)
                     
                     
     # mask entire image. Also masks each individual cell. Saves all as
@@ -161,8 +159,6 @@ class Pipeline:
         cell_folder_path = "TIFFs/Masked/" + image_name + "/Cell/"
         if not os.path.exists(cell_folder_path):
             os.mkdir(cell_folder_path)
-        
-        
         
         # get image from corresponding .sdt file
         sdt_path = Path("SDTs/" + image_name + ".sdt")
@@ -201,7 +197,12 @@ class Pipeline:
         # save and make irf of masked image
         file_name = image_name + "masked_image"
         
-        IRF_decay = self.__generate_irf(file_name, nonempty_channel, masked_image)
+        if nonempty_channel == 0:
+            irf_path = "IRFs/txt/Ch1_IRF_890.txt"
+        else:
+            irf_path = "IRFs/txt/Ch2_IRF_750.txt"
+        
+        IRF_decay = self.__generate_irf(irf_path, image_name, masked_image)
         
         tiff.imwrite(image_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
@@ -229,19 +230,6 @@ class Pipeline:
             
         # plot phasor
         self.plot_cell_phasor(cell_images, IRF_decay)
-        
-        # same = True
-        # for cell in cell_images:
-        #     m1 = self.__cell_average_GS(cell, IRF_decay)
-        #     m2 = self.__get_GS(np.sum(np.sum(cell, 0), 0), IRF_decay)
-            
-        #     if not str(m1[0]).split(".")[1][:5] == str(m2[0]).split(".")[1][:5]:
-        #         same = False
-                
-        #     if not str(m1[1]).split(".")[1][:5] == str(m2[1]).split(".")[1][:5]:
-        #         same = False
-            
-        # print(same)
                 
               
     # calculate the (G,S) coordinates of pixel
@@ -293,6 +281,7 @@ class Pipeline:
                 
         visualizer.plot_phasor(coords)
             
+        
     # # testing purposes only
     # def __correlate_max_peak(self, irf, data, return_array = False):
     #     # get max indexes
@@ -306,33 +295,5 @@ class Pipeline:
     #         return self.__shift(irf, shift)
         
     #     return shift
-    
-    # # old method
-    # def __cell_average_GS(self, cell, IRF_decay):
-    #     weighted_gs_sum = 0
-    #     intensity_sum = 0
-        
-    #     # calculate every (G,S) coordinate for nonzero pixel and return average
-    #     for row in range(cell.shape[0]):
-    #         for col in range(cell.shape[1]):
-    #             if np.count_nonzero(cell[row,col]) != 0:
-    #                 intensity = np.sum(cell[row,col])
-    #                 weighted_gs_sum += intensity * self.__get_GS(cell[row,col], IRF_decay)
-    #                 intensity_sum += intensity
-                
-    #     return weighted_gs_sum / intensity_sum
-
-
-    # # plots cell level phasor
-    # #
-    # # param: cells - iterable colletion of 3D cell array
-    # def plot_cell_phasor(self, cells, IRF_decay):
-    #     # get cell (G,S) for each cell
-    #     coords = list()
-    #     for cell in cells:
-    #         coords.append(self.__cell_average_GS(cell, IRF_decay))
-            
-    #     # plot
-    #     visualizer.plot_phasor(coords)
 
 
