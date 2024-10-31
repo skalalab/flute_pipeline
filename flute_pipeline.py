@@ -16,8 +16,6 @@ import os
 import sdt_reader as sdt
 from scipy import signal
 import flute_pipeline_visualizer as visualizer
-import random
-
 
 # This class is the pipeline
 class Pipeline:
@@ -228,12 +226,14 @@ class Pipeline:
                           self.__swap_time_axis(cell_image), metadata=metadata)
             
             
-        # plot phasor
-        self.plot_cell_phasor(cell_images, IRF_decay)
-                
+        # return cell_images and IRF_decay as tuple
+        return {"cells": cell_images, "IRF_decay": IRF_decay}      
               
     # calculate the (G,S) coordinates of pixel
     #
+    # param: cell-hist - summed time bins of cell
+    # param: IRF_decay - shifted IRF values
+    # return: gs coordinate as np array
     def __get_GS(self, cell_hist, IRF_decay):
         f = 0.080   # laser repetition rate in [GHz]
         w = 2*np.pi*f
@@ -254,18 +254,20 @@ class Pipeline:
         
         return np.array([G_decay, S_decay])
 
-    # plots cell level phasor
+
+    # plots cell level phasor of one or more images
     #
-    # param: cells - iterable collection of 3D cell array
-    def plot_cell_phasor(self, cells, IRF_decay):
-        # get cell (G,S) for each cell
+    # param: images - list of of {"cells": cells, "IRF_decay":, IRF_decay} dicts
+    def plot_cell_phasor(self, images):
+        # get cell (G,S) for each cell of image
         coords = list()
-        for cell in cells:
-            # get cell_hist
-            cell_hist = np.sum(cell, 0)
-            cell_hist = np.sum(cell_hist, 0)
+        for image in images:
+            for cell in image["cells"]:
+                # get cell_hist
+                cell_hist = np.sum(cell, 0)
+                cell_hist = np.sum(cell_hist, 0)
             
-            coords.append(self.__get_GS(cell_hist, IRF_decay))
+                coords.append(self.__get_GS(cell_hist, image["IRF_decay"]))
             
         # plot
         visualizer.plot_phasor(coords)    
@@ -296,4 +298,19 @@ class Pipeline:
         
     #     return shift
 
+    # # plots cell level phasor
+    # #
+    # # param: cells - iterable collection of 3D cell array
+    # def plot_cell_phasor(self, cells, IRF_decay):
+    #     # get cell (G,S) for each cell
+    #     coords = list()
+    #     for cell in cells:
+    #         # get cell_hist
+    #         cell_hist = np.sum(cell, 0)
+    #         cell_hist = np.sum(cell_hist, 0)
+            
+    #         coords.append(self.__get_GS(cell_hist, IRF_decay))
+            
+    #     # plot
+    #     visualizer.plot_phasor(coords)  
 
