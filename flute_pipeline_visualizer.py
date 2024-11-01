@@ -61,7 +61,7 @@ def plot_phasor(gs_coords):
     print(np.average(np.array(s)))
     
     # plot
-    plt.scatter(g, s)
+    plt.scatter(g, s, s=3)
     plt.show()
 
 

@@ -8,19 +8,32 @@ run flute pipeline
 """
 
 import flute_pipeline as pipeline
-import flute_pipeline_visualizer as visualizer
 from pathlib import Path
 import sdt_reader as sdt
 import tifffile as tiff
+import numpy as np
 
 
-# Run
 pipeline = pipeline.Pipeline()
 
-# sdt_data = sdt.read_sdt150("SDTs/dHL60_Control_DMSO_02_n-024_summed.sdt")
-# sdt_data = sdt_data[1]
-# tiff.imwrite("test.tif", pipeline._Pipeline__swap_time_axis(sdt_data))
+# do some shit
+summed_sdts = [path for path in Path("SDTs").iterdir() if "summed" in path.name]
 
+for path in summed_sdts:
+    sdt_data = sdt.read_sdt150(path)
+    
+    if (sdt_data.ndim == 4):
+        for i in range(sdt_data.shape[0]):
+            if (np.count_nonzero(sdt_data[i]) == 0):
+                continue
+            
+            sdt_data = sdt_data[i]
+            break
+    
+    tiff.imwrite("TIFFs/summed/" + path.name[:path.name.find(".sdt")] + ".tif", pipeline._Pipeline__swap_time_axis(sdt_data))
+
+
+# Run pipeline
 sdt_paths = [path for path in Path("SDTs").iterdir()]
 
 images = list()

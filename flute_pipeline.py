@@ -191,7 +191,7 @@ class Pipeline:
         
         # get the mask of the sdt
         for mask in Path("Masks").iterdir():
-            if image_name in mask.name:
+            if image_name in mask.name or image_name[:image_name.find("_summed")] in mask.name:
                 mask_path = mask
                 break
         
