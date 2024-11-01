@@ -35,19 +35,30 @@ def plot_phasor(gs_coords):
     u = np.arange(0, 100, 0.01)
     ax.plot(1/(1+u**2), u/(1+u**2), c='k', picker=True)
     wt = 2*np.pi*f*np.array([0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],dtype=float)
-    ax.scatter(1/(1+wt**2), wt/(1+wt**2), s=50, c='k', marker="o", picker=True)
+    x = 1/(1+wt**2)
+    y = wt/(1+wt**2)
+    ax.scatter(x, y, s=50, c='k', marker="o", picker=True)
     # ln = ax.scatter(0, 0, s=50, c='r', marker="o", animated=True)  # animated=True tells matplotlib to only draw the artist when we explicitly request it
-    # Lifetime labels
-    ax.annotate('0.5 ns', xy=(0.985, 0.16), fontsize=6)
-    ax.annotate('1 ns', xy=(0.92, 0.30), fontsize=6)
-    ax.annotate('2 ns', xy=(0.72, 0.47), fontsize=6)
-    ax.annotate('3 ns', xy=(0.52, 0.515), fontsize=6)
-    ax.annotate('4 ns', xy=(0.372, 0.505), fontsize=6)
-    ax.annotate('5 ns', xy=(0.27, 0.475), fontsize=6)
+    
+    # labels
+    lifetime_labels = ['0.5 ns', '1 ns', '2 ns', '3 ns', '4 ns', '5 ns']
+    labels = len(lifetime_labels)
+    
+    label_coords = list(zip(list(x - 0.02), list(y + 0.03)))[:labels]
+    
+    for i in range(labels):
+        ax.annotate(lifetime_labels[i], xy=label_coords[i], fontsize=10)
+    
+    ax.set_xlabel("g", fontsize=15, fontweight = "bold")
+    ax.set_ylabel("s", fontsize=15, fontweight = "bold")
+    ax.text(0.8, 0.5, str(f * 1000) + "MHz", fontsize=15, fontweight = "bold")
     
     # data points
     g = [gs[0] for gs in gs_coords]
     s = [gs[1] for gs in gs_coords]
+    
+    print(np.average(np.array(g)))
+    print(np.average(np.array(s)))
     
     # plot
     plt.scatter(g, s)

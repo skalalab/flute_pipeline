@@ -2,4 +2,4 @@
 *.tiff
 *.tif
 *.txt
-__pycache__/
+*.pyc

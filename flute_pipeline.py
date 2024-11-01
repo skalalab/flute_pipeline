@@ -13,7 +13,7 @@ import tifffile as tiff
 import numpy as np
 from pathlib import Path
 import os
-import sdt_reader as sdt
+import sdt_reader
 from scipy import signal
 import flute_pipeline_visualizer as visualizer
 
@@ -124,6 +124,7 @@ class Pipeline:
         # shift found by taking middle index of cross correlation array
         # and subtracing index of peak correlation
         shift = (scaled_bins - 1) - np.where(corr_result == max(corr_result))[0][0]
+        print(shift)
         
         # shift and unscale irf values
         shifted_irf_values = self.__shift(interp_irf_values, shift)
@@ -142,13 +143,14 @@ class Pipeline:
         return np.array(final_irf_values, np.float32)
                     
                     
-    # mask entire image. Also masks each individual cell. Saves all as
-    # tiff files
+    # mask entire sdt image and split into cells. Saves all as .tif files
+    # Creates a shifted irf .tif for the sdt image also
     #
-    # param: path - the mask .tiff file
-    def mask_image(self, path):
+    # param: sdt - the path for the sdt to be masked
+    # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
+    def mask_image(self, sdt):
         # create folders for all masked image and cells
-        image_name = "_".join(path.name[:path.name.index(".tif")].split("_")[:-2])
+        image_name = sdt.name[:sdt.name.find(".sdt")]
         
         image_folder_path = "TIFFs/Masked/" + image_name + "/Image/"
         if not os.path.exists(image_folder_path):
@@ -158,9 +160,8 @@ class Pipeline:
         if not os.path.exists(cell_folder_path):
             os.mkdir(cell_folder_path)
         
-        # get image from corresponding .sdt file
-        sdt_path = Path("SDTs/" + image_name + ".sdt")
-        sdt_data = sdt.read_sdt150(sdt_path)
+        # get image datafrom sdt
+        sdt_data = sdt_reader.read_sdt150(sdt)
              
         # remove empty channel if needed
         nonempty_channel = 0
@@ -176,12 +177,26 @@ class Pipeline:
         # generate metadata
         metadata = self.__generate_metadata(sdt_data.shape[2])
                     
-        # save tif of original image
+        # make shifted irf tif
+        if nonempty_channel == 0:
+            irf_path = "IRFs/txt/Ch1_IRF_890.txt"
+        else:
+            irf_path = "IRFs/txt/Ch2_IRF_750.txt"
+        
+        IRF_decay = self.__generate_irf(irf_path, image_name, sdt_data)
+        
+        # save tif of original image 
         tiff.imwrite("TIFFs/Original/" + image_name +".tif", 
                      self.__swap_time_axis(sdt_data), metadata=metadata)
         
+        # get the mask of the sdt
+        for mask in Path("Masks").iterdir():
+            if image_name in mask.name:
+                mask_path = mask
+                break
+        
         # now mask the image
-        with tiff.TiffFile(path) as mask_tif:
+        with tiff.TiffFile(mask_path) as mask_tif:
             mask = mask_tif.asarray()
             
         masked_image = np.copy(sdt_data)
@@ -192,15 +207,8 @@ class Pipeline:
                 if mask[row][col] == 0:
                     masked_image[row][col][:] = 0
              
-        # save and make irf of masked image
+        # save masked image
         file_name = image_name + "masked_image"
-        
-        if nonempty_channel == 0:
-            irf_path = "IRFs/txt/Ch1_IRF_890.txt"
-        else:
-            irf_path = "IRFs/txt/Ch2_IRF_750.txt"
-        
-        IRF_decay = self.__generate_irf(irf_path, image_name, masked_image)
         
         tiff.imwrite(image_folder_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
