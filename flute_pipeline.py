@@ -245,7 +245,8 @@ class Pipeline:
     def __get_GS(self, cell_hist, IRF_decay):
         f = 0.080   # laser repetition rate in [GHz]
         w = 2*np.pi*f
-        time_axis = np.arange(0, 1/f, 1/f/256)
+        # time_axis = np.arange(0, 1/f, 1/f/256)
+        time_axis = np.arange(0, 10, 10/256)
         G_IRF = np.dot(np.transpose(IRF_decay) , np.cos(w*time_axis)) / np.sum(IRF_decay)
         S_IRF = np.dot(np.transpose(IRF_decay) , np.sin(w*time_axis)) / np.sum(IRF_decay)
         cos_coeff = np.cos(w*time_axis)
