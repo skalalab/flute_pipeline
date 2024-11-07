@@ -20,33 +20,6 @@ import flute_pipeline_visualizer as visualizer
 # This class is the pipeline
 class Pipeline:
     
-    # creates all folders needed to run program
-    def __init__(self):        
-        # create all folders needed
-        sdt = "SDTs"
-        if not os.path.exists(sdt):
-            os.mkdir(sdt)
-            
-        mask = "Masks"
-        if not os.path.exists(mask):
-            os.mkdir(mask)
-        
-        tiff_original = "TIFFs/Original"
-        if not os.path.exists(tiff_original):
-            os.makedirs(tiff_original)
-        
-        tiff_masked = "TIFFs/Masked"
-        if not os.path.exists(tiff_masked):
-            os.mkdir(tiff_masked)
-            
-        irf_txt = "IRFs/txt"
-        if not os.path.exists(irf_txt):
-            os.makedirs(irf_txt)
-            
-        irf_tiff = "IRFs/tiff"
-        if not os.path.exists(irf_tiff):
-            os.mkdir(irf_tiff)
-
     # create metadata for an image of sdt data
     #
     # param: time_bins - number of time bins, greater than 0
@@ -130,14 +103,21 @@ class Pipeline:
         shifted_irf_values = self.__shift(interp_irf_values, shift)
         final_irf_values = [shifted_irf_values[i] for i in range(0, scaled_bins, x_scale_factor)]
             
-        # create shifted irf tiff        
+        # create shifted irf array       
         irf_array = np.empty(image_data.shape, dtype=np.float32)
         
         for row in range(irf_array.shape[0]):
             for col in range(irf_array.shape[1]):
                 np.put(irf_array[row][col], range(time_bins), final_irf_values)
                 
-        tiff.imwrite("IRFs/tiff/" + image_name + "irf" + ".tif", self.__swap_time_axis(irf_array))
+        # save irf as tif 
+        visualizer.plot_irf_data(final_irf_values, data_values)
+        file_path = "Outputs/" + image_name + "/"
+        
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
+        
+        tiff.imwrite(file_path + image_name + "irf.tif", self.__swap_time_axis(irf_array))
         
         # return the shifted irf values
         return np.array(final_irf_values, np.float32)
@@ -152,13 +132,9 @@ class Pipeline:
         # create folders for all masked image and cells
         image_name = sdt.name[:sdt.name.find(".sdt")]
         
-        image_folder_path = "TIFFs/Masked/" + image_name + "/Image/"
-        if not os.path.exists(image_folder_path):
-            os.makedirs(image_folder_path)
-            
-        cell_folder_path = "TIFFs/Masked/" + image_name + "/Cell/"
-        if not os.path.exists(cell_folder_path):
-            os.mkdir(cell_folder_path)
+        output_path = "Outputs/" + image_name + "/"
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
         
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
@@ -185,9 +161,6 @@ class Pipeline:
         
         IRF_decay = self.__generate_irf(irf_path, image_name, sdt_data)
         
-        # save tif of original image 
-        tiff.imwrite("TIFFs/Original/" + image_name +".tif", 
-                     self.__swap_time_axis(sdt_data), metadata=metadata)
         
         # get the mask of the sdt
         for mask in Path("Masks").iterdir():
@@ -210,7 +183,7 @@ class Pipeline:
         # save masked image
         file_name = image_name + "masked_image"
         
-        tiff.imwrite(image_folder_path + file_name + ".tif", 
+        tiff.imwrite(output_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
         
         # split masked image into single cells
@@ -227,11 +200,7 @@ class Pipeline:
                     if mask[row][col] != cell_values[i]:
                         cell_image[row][col][:] = 0
                     
-            # save cell
-            file_path = image_name + "cell_" + str(cell_values[i])
             cell_images.append(cell_image)
-            tiff.imwrite(cell_folder_path + file_path + ".tif", 
-                          self.__swap_time_axis(cell_image), metadata=metadata)
             
             
         # return cell_images and IRF_decay as tuple

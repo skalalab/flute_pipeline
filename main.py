@@ -25,5 +25,5 @@ for path in sdt_paths:
     images.append(image) 
     pipeline.plot_cell_phasor([image])
     
-# pipeline.plot_cell_phasor(images)      
+pipeline.plot_cell_phasor(images)      
 

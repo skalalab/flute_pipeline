@@ -15,33 +15,18 @@ import flute_pipeline_visualizer as visualizer
 import flute_pipeline as pipeline
 import os
 
-# tests constructor of pipeline
-#
-# return: false if bad
-def test_init():
-    # all folders created
-    testline = pipeline.Pipeline()
+# # tests constructor of pipeline
+# #
+# # return: false if bad
+# def test_init():
+#     # all folders created
+#     testline = pipeline.Pipeline()
     
-    if not os.path.exists("SDTs"):
-        return False
+#     if not os.path.exists("Outputs"):
+#         return False
     
-    if not os.path.exists("Masks"):
-        return False
-    
-    if not os.path.exists("IRFs/tiff"):
-        return False
-    
-    if not os.path.exists("IRFs/txt"):
-        return False
-    
-    if not os.path.exists("TIFFs/Masked"):
-        return False
-    
-    if not os.path.exists("TIFFs/Original"):
-        return False
-    
-    # all good
-    return True
+#     # all good
+#     return True
 
 
 # tests generate_metadata()
@@ -274,11 +259,12 @@ def test_generate_irf():
         return False
     
     # text has whitespace
-    data = np.empty((4,4,6))
+    values = [0, 5, 10, 9, 8, 5]
+    data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
     try:
         testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data)
-    except:
+    except Exception as e:
         return False
         
     # positive shift
@@ -288,7 +274,7 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data)
     
     # check tif
-    with tiff.TiffFile("IRFs/tiff/positiveirf.tif") as tif:
+    with tiff.TiffFile("Outputs/positive/positiveirf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -323,7 +309,7 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data)
     
     # check tif
-    with tiff.TiffFile("IRFs/tiff/negativeirf.tif") as tif:
+    with tiff.TiffFile("Outputs/negative/negativeirf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -358,7 +344,7 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data)
     
     # check tif
-    with tiff.TiffFile("IRFs/tiff/noirf.tif") as tif:
+    with tiff.TiffFile("Outputs/no/noirf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -401,7 +387,7 @@ def pass_fail(function):
 #=======================================================================================
 
 # do the tests
-print("test_init(): " + pass_fail(test_init))    
+# print("test_init(): " + pass_fail(test_init))    
 print("test_generate_metadata(): " + pass_fail(test_generate_metadata))
 print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))

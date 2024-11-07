@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 import sdt_reader as sdt
 
 # plots irf values against data values
-def plot_irf_data(irf, data, title):
+def plot_irf_data(irf, data):
     plt.plot(irf / max(irf), label = "irf")
     plt.plot(data / max(data), label = "data")
     plt.legend()
-    plt.title(title)
+    # plt.title(title)
     plt.show()
     
 # plot a phasor plot
