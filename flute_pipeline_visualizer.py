@@ -27,7 +27,7 @@ def plot_irf_data(irf, data):
 def plot_phasor(gs_coords):
     # frame
     f = 0.080   # laser repetition rate in [GHz]
-    print(len(gs_coords))
+    # print(len(gs_coords))
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_xlim([-0.05, 1.05])
@@ -57,35 +57,36 @@ def plot_phasor(gs_coords):
     g = [gs[0] for gs in gs_coords]
     s = [gs[1] for gs in gs_coords]
     
-    print(np.average(np.array(g)))
-    print(np.average(np.array(s)))
+    # print(np.average(np.array(g)))
+    # print(np.average(np.array(s)))
     
     # plot
     plt.scatter(g, s, s=3)
     plt.show()
 
 
-# # intensity graph of individual channel of sdt file
-# #
-# # param: file is path of sdt file
-# def visualize_sdt(self, file):
-#     test_data = sdt.read_sdt150(file)
+# intensity graph of individual channel of sdt file
+#
+# param: file is path of sdt file
+def visualize_sdt(file):
+    test_data = sdt.read_sdt150(file)
     
-#     # visualize
-#     if (test_data.ndim == 3):
-#         plt.imshow(np.sum(test_data, axis = 2)) 
-#         plt.title("SDT")
-#         plt.show()
+    # visualize
+    if (test_data.ndim == 3):
+        plt.imshow(np.sum(test_data, axis = 2)) 
+        plt.title("SDT")
+        plt.show()
          
-#     elif (test_data.ndim == 4):
-#         for i in range(test_data.shape[0]):
+    elif (test_data.ndim == 4):
+        for i in range(test_data.shape[0]):
             
-#             if (np.count_nonzero(test_data[i]) == 0):
-#                 continue
+            if (np.count_nonzero(test_data[i]) == 0):
+                continue
             
-#             plt.imshow(np.sum(test_data[i], axis = 2))
-#             plt.title("SDT")
-#             plt.show()
+            print(i)
+            plt.imshow(np.sum(test_data[i], axis = 2))
+            plt.title("SDT")
+            plt.show()
              
         
 # # intensity graph of single channel tiff file

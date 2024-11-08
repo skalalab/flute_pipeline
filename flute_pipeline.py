@@ -97,7 +97,6 @@ class Pipeline:
         # shift found by taking middle index of cross correlation array
         # and subtracing index of peak correlation
         shift = (scaled_bins - 1) - np.where(corr_result == max(corr_result))[0][0]
-        print(shift)
         
         # shift and unscale irf values
         shifted_irf_values = self.__shift(interp_irf_values, shift)
@@ -111,7 +110,7 @@ class Pipeline:
                 np.put(irf_array[row][col], range(time_bins), final_irf_values)
                 
         # save irf as tif 
-        visualizer.plot_irf_data(final_irf_values, data_values)
+        # visualizer.plot_irf_data(final_irf_values, data_values)
         file_path = "Outputs/" + image_name + "/"
         
         if not os.path.exists(file_path):
@@ -127,8 +126,9 @@ class Pipeline:
     # Creates a shifted irf .tif for the sdt image also
     #
     # param: sdt - the path for the sdt to be masked
+    # param: irf - path of txt file of irf
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt):
+    def mask_image(self, sdt, irf):
         # create folders for all masked image and cells
         image_name = sdt.name[:sdt.name.find(".sdt")]
         
@@ -140,27 +140,19 @@ class Pipeline:
         sdt_data = sdt_reader.read_sdt150(sdt)
              
         # remove empty channel if needed
-        nonempty_channel = 0
         if (sdt_data.ndim == 4):
             for i in range(sdt_data.shape[0]):
                 if (np.count_nonzero(sdt_data[i]) == 0):
                     continue
                 
                 sdt_data = sdt_data[i]
-                nonempty_channel = i
                 break
             
         # generate metadata
         metadata = self.__generate_metadata(sdt_data.shape[2])
                     
         # make shifted irf tif
-        if nonempty_channel == 0:
-            irf_path = "IRFs/txt/Ch1_IRF_890.txt"
-        else:
-            irf_path = "IRFs/txt/Ch2_IRF_750.txt"
-        
-        IRF_decay = self.__generate_irf(irf_path, image_name, sdt_data)
-        
+        IRF_decay = self.__generate_irf(irf, image_name, sdt_data)
         
         # get the mask of the sdt
         for mask in Path("Masks").iterdir():
@@ -206,6 +198,7 @@ class Pipeline:
         # return cell_images and IRF_decay as tuple
         return {"cells": cell_images, "IRF_decay": IRF_decay}      
               
+    
     # calculate the (G,S) coordinates of pixel
     #
     # param: cell-hist - summed time bins of cell
@@ -248,18 +241,20 @@ class Pipeline:
                 coords.append(self.__get_GS(cell_hist, image["IRF_decay"]))
             
         # plot
-        visualizer.plot_phasor(coords)    
+        visualizer.plot_phasor(coords) 
+        return coords
+        
 
 
-    # testing purposese only
-    def plot_pixel_phasor(self, image, IRF_decay):
-        coords = list()
-        for row in range(image.shape[0]):
-            for col in range(image.shape[1]):
-                if np.count_nonzero(image[row,col]) != 0:
-                    coords.append(self.__get_GS(image[row,col], IRF_decay))
+    # # testing purposese only
+    # def plot_pixel_phasor(self, image, IRF_decay):
+    #     coords = list()
+    #     for row in range(image.shape[0]):
+    #         for col in range(image.shape[1]):
+    #             if np.count_nonzero(image[row,col]) != 0:
+    #                 coords.append(self.__get_GS(image[row,col], IRF_decay))
                 
-        visualizer.plot_phasor(coords)
+    #     visualizer.plot_phasor(coords)
             
         
     # # testing purposes only
@@ -275,20 +270,3 @@ class Pipeline:
     #         return self.__shift(irf, shift)
         
     #     return shift
-
-    # # plots cell level phasor
-    # #
-    # # param: cells - iterable collection of 3D cell array
-    # def plot_cell_phasor(self, cells, IRF_decay):
-    #     # get cell (G,S) for each cell
-    #     coords = list()
-    #     for cell in cells:
-    #         # get cell_hist
-    #         cell_hist = np.sum(cell, 0)
-    #         cell_hist = np.sum(cell_hist, 0)
-            
-    #         coords.append(self.__get_GS(cell_hist, IRF_decay))
-            
-    #     # plot
-    #     visualizer.plot_phasor(coords)  
-
