@@ -57,8 +57,8 @@ def plot_phasor(gs_coords):
     g = [gs[0] for gs in gs_coords]
     s = [gs[1] for gs in gs_coords]
     
-    # print(np.average(np.array(g)))
-    # print(np.average(np.array(s)))
+    print(np.average(np.array(g)))
+    print(np.average(np.array(s)))
     
     # plot
     plt.scatter(g, s, s=3)

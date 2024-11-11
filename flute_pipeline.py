@@ -127,8 +127,9 @@ class Pipeline:
     #
     # param: sdt - the path for the sdt to be masked
     # param: irf - path of txt file of irf
+    # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf):
+    def mask_image(self, sdt, irf, masks_path):
         # create folders for all masked image and cells
         image_name = sdt.name[:sdt.name.find(".sdt")]
         
@@ -155,8 +156,8 @@ class Pipeline:
         IRF_decay = self.__generate_irf(irf, image_name, sdt_data)
         
         # get the mask of the sdt
-        for mask in Path("Masks").iterdir():
-            if image_name in mask.name or image_name[:image_name.find("_summed")] in mask.name:
+        for mask in Path(masks_path).iterdir():
+            if (image_name in mask.name or image_name[:image_name.find("_summed")] in mask.name) and ".tif" in mask.name:
                 mask_path = mask
                 break
         

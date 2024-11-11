@@ -378,12 +378,12 @@ def test_mask_image():
     testline = Pipeline()
     
     # first image
-    results = testline.mask_image(Path("SDTs/dHL60_Control_DMSO_02_n-024.sdt"), "IRFs/txt/Ch2_IRF_750.txt")
+    results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", "./")
     
-    with tiff.TiffFile("Masks/dHL60_Control_DMSO_02_n-024_photons_cellpose.tiff") as mask_tif:
+    with tiff.TiffFile("dHL60_Control_DMSO_02_n-024_photons_cellpose.tiff") as mask_tif:
         mask = mask_tif.asarray()
     
-    sdt_data = sdt.read_sdt150(Path("SDTs/dHL60_Control_DMSO_02_n-024.sdt"))[1]
+    sdt_data = sdt.read_sdt150(Path("dHL60_Control_DMSO_02_n-024.sdt"))[1]
     
     # test returned irf decay
     if len(results["IRF_decay"]) != 256:
@@ -460,10 +460,10 @@ def test_plot_cell_phasor():
 
     images = list()
     
-    image = pipeline.mask_image(Path("SDTs/dHL60_Control_DMSO_02_n-024.sdt"), "IRFs/txt/Ch2_IRF_750.txt")
+    image = pipeline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", "./")
     images.append(image) 
 
-    image = pipeline.mask_image(Path("SDTs/dHL60_Control_na_01_n-010.sdt"), "IRFs/txt/Ch2_IRF_750.txt")
+    image = pipeline.mask_image(Path("dHL60_Control_na_01_n-010.sdt"), "Ch2_IRF_750.txt", "./")
     images.append(image) 
         
     # test first plot
