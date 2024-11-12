@@ -23,8 +23,8 @@ def plot_irf_data(irf, data):
     
 # plot a phasor plot
 #
-# param: gs_coords - iterable collection of (G,S) value in np array form
-def plot_phasor(gs_coords):
+# param: coords - iterable collection of (G,S) value in np array form
+def plot_phasor(coords):
     # frame
     f = 0.080   # laser repetition rate in [GHz]
     # print(len(gs_coords))
@@ -54,14 +54,13 @@ def plot_phasor(gs_coords):
     ax.text(0.8, 0.5, str(f * 1000) + "MHz", fontsize=15, fontweight = "bold")
     
     # data points
-    g = [gs[0] for gs in gs_coords]
-    s = [gs[1] for gs in gs_coords]
-    
-    print(np.average(np.array(g)))
-    print(np.average(np.array(s)))
-    
+    for subcoords in coords:
+        g = [gs[0] for gs in subcoords]
+        s = [gs[1] for gs in subcoords]
+        
+        plt.scatter(g, s, s=3)
+
     # plot
-    plt.scatter(g, s, s=3)
     plt.show()
 
 

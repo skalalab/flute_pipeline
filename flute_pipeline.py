@@ -193,11 +193,10 @@ class Pipeline:
                     if mask[row][col] != cell_values[i]:
                         cell_image[row][col][:] = 0
                     
-            cell_images.append(cell_image)
+            cell_images.append(cell_image)            
             
-            
-        # return cell_images and IRF_decay as tuple
-        return {"cells": cell_images, "IRF_decay": IRF_decay}      
+        # return cell_images, cell value, IRF_decay, and output path as tuple
+        return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
               
     
     # calculate the (G,S) coordinates of pixel
@@ -229,21 +228,34 @@ class Pipeline:
 
     # plots cell level phasor of one or more images
     #
-    # param: images - list of of {"cells": cells, "IRF_decay":, IRF_decay} dicts
+    # param: images - list of of {"name", image_name, cells": cells, "values", cell_values, "IRF_decay":, IRF_decay} dicts
     def plot_cell_phasor(self, images):
         # get cell (G,S) for each cell of image
         coords = list()
         for image in images:
-            for cell in image["cells"]:
+            data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.txt", "w")
+            
+            subcoords = list()
+            i = 0
+            for cell in image["cells"]:                    
                 # get cell_hist
                 cell_hist = np.sum(cell, 0)
                 cell_hist = np.sum(cell_hist, 0)
             
-                coords.append(self.__get_GS(cell_hist, image["IRF_decay"]))
+                # get gs
+                gs = self.__get_GS(cell_hist, image["IRF_decay"])
+                subcoords.append(gs)
+                
+                # write gs to .txt file
+                data.write("Cell " + str(image["values"][i]) + ": G - " + str(gs[0]) + ", S - " + str(gs[1]) + "\n")
+                
+                i += 1
+                
+            coords.append(subcoords)
+            data.close()
             
         # plot
         visualizer.plot_phasor(coords) 
-        return coords
         
 
 
