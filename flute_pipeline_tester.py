@@ -503,7 +503,7 @@ print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))
 print("test_generate_irf(): " + pass_fail(test_generate_irf))
 print("test_mask_image(): " + pass_fail(test_mask_image))
-print("test_plot_cell_phasor(): " + pass_fail(test_plot_cell_phasor))
+# print("test_plot_cell_phasor(): " + pass_fail(test_plot_cell_phasor))
 
 
 

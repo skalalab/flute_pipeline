@@ -156,7 +156,7 @@ class Pipeline:
         IRF_decay = self.__generate_irf(irf, image_name, sdt_data)
         
         # get the mask of the sdt
-        for mask in Path(masks_path).iterdir():
+        for mask in masks_path.iterdir():
             if (image_name in mask.name or image_name[:image_name.find("_summed")] in mask.name) and ".tif" in mask.name:
                 mask_path = mask
                 break
@@ -198,6 +198,35 @@ class Pipeline:
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
               
+    
+    
+    def process_summed(self, sdt, irf):
+        # create folders for all masked image and cells
+        image_name = sdt.name[:sdt.name.find("_summed")]
+        
+        output_path = "Outputs/" + image_name + "/"
+        if not os.path.exists(output_path):
+            raise Exception("expected path " + output_path + "not there?")    
+            
+        # get image datafrom sdt
+        sdt_data = sdt_reader.read_sdt150(sdt)
+             
+        # remove empty channel if needed
+        if (sdt_data.ndim == 4):
+            for i in range(sdt_data.shape[0]):
+                if (np.count_nonzero(sdt_data[i]) == 0):
+                    continue
+                
+                sdt_data = sdt_data[i]
+                break
+        
+        # save sdt_data as tiff
+        tiff.imwrite(output_path + "summed_image.tif",  sdt_data)
+                    
+        # make shifted irf tif
+        IRF_decay = self.__generate_irf(irf, "summed", sdt_data)
+        
+        
     
     # calculate the (G,S) coordinates of pixel
     #

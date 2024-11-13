@@ -9,18 +9,26 @@ Demo
 
 from flute_pipeline import Pipeline
 from pathlib import Path
+from sum_sdts import sum_roi_decays
 
-# Run pipeline
+
+# run pipeline
 pipeline = Pipeline()
+
+# sum sdts 
+sum_roi_decays.sum_sdts()
+
+# mask and plot
+sdt_paths = [path for path in Path("./").iterdir() if ".sdt" in path.name]
 
 images = list()
 
-image = pipeline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", "./")
-images.append(image) 
-pipeline.plot_cell_phasor([image])
-
-image = pipeline.mask_image(Path("dHL60_Control_na_01_n-010.sdt"), "Ch2_IRF_750.txt", "./")
-images.append(image) 
-pipeline.plot_cell_phasor([image])
+for path in sdt_paths:
+    if "summed" not in path.name:
+        image = pipeline.mask_image(path, "Ch2_IRF_750.txt", Path("./"))
+        images.append(image) 
+        pipeline.plot_cell_phasor([image])
+    else:
+        pipeline.process_summed(path, "Ch2_IRF_750.txt")
     
 pipeline.plot_cell_phasor(images)   
