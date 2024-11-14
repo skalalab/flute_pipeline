@@ -7,7 +7,7 @@ Created on Fri Oct 11 14:04:44 2024
 run flute pipeline
 """
 
-from flute_pipeline import Pipeline
+from pipeline import Pipeline
 from pathlib import Path
 import argparse
 from sum_sdts import sum_roi_decays
@@ -23,7 +23,7 @@ args = parser.parse_args()
 pipeline = Pipeline()
 
 # sum sdts 
-sum_roi_decays.sum_sdts()
+sum_roi_decays.sum_sdts(Path(args.sdt_directory), Path(args.mask_directory))
 
 # mask and plot
 sdt_paths = [path for path in Path(args.sdt_directory).iterdir() if ".sdt" in path.name]
@@ -34,9 +34,11 @@ for path in sdt_paths:
     if "summed" not in path.name:
         image = pipeline.mask_image(path, args.irf, Path(args.mask_directory))
         images.append(image) 
-        pipeline.plot_cell_phasor([image])
+        pipeline.plot_cell_phasor([image], image["name"])
     else:
         pipeline.process_summed(path, args.irf)
     
-pipeline.plot_cell_phasor(images)   
+pipeline.plot_cell_phasor(images, "summary") 
+
+print("success...")  
     

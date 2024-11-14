@@ -24,7 +24,7 @@ def plot_irf_data(irf, data):
 # plot a phasor plot
 #
 # param: coords - iterable collection of (G,S) value in np array form
-def plot_phasor(coords):
+def plot_phasor(title, coords, names, show = False):
     # frame
     f = 0.080   # laser repetition rate in [GHz]
     # print(len(gs_coords))
@@ -41,6 +41,7 @@ def plot_phasor(coords):
     # ln = ax.scatter(0, 0, s=50, c='r', marker="o", animated=True)  # animated=True tells matplotlib to only draw the artist when we explicitly request it
     
     # labels
+    plt.title(title)
     lifetime_labels = ['0.5 ns', '1 ns', '2 ns', '3 ns', '4 ns', '5 ns']
     labels = len(lifetime_labels)
     
@@ -54,14 +55,20 @@ def plot_phasor(coords):
     ax.text(0.8, 0.5, str(f * 1000) + "MHz", fontsize=15, fontweight = "bold")
     
     # data points
+    i = 0
     for subcoords in coords:
         g = [gs[0] for gs in subcoords]
         s = [gs[1] for gs in subcoords]
         
-        plt.scatter(g, s, s=3)
-
-    # plot
-    plt.show()
+        plt.scatter(g, s, s=3, label=names[i])
+        i += 1
+    
+    # plot (if needed) and save
+    plt.legend()
+    plt.savefig("Outputs/Graphs/" + title + ".png")
+    
+    if show:
+        plt.show()
 
 
 # intensity graph of individual channel of sdt file

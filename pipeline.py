@@ -20,6 +20,13 @@ import flute_pipeline_visualizer as visualizer
 # This class is the pipeline
 class Pipeline:
     
+    def __init__(self):
+        # craft some directories
+        output_graph = "Outputs/Graphs"
+        if not os.path.exists(output_graph):
+            os.makedirs(output_graph)
+    
+    
     # create metadata for an image of sdt data
     #
     # param: time_bins - number of time bins, greater than 0
@@ -70,7 +77,7 @@ class Pipeline:
     # param: image_name - name of image of data
     # param: image_data - the data of the .sdt
     # return: the shifted irf values
-    def __generate_irf(self, irf_path, image_name, image_data):
+    def __generate_irf(self, irf_path, image_name, image_data, summed = False):
         # get the irf values from .txt file 
         with open(irf_path) as irf:
             irf_values = [int(line) for line in irf if line.strip()]
@@ -116,7 +123,10 @@ class Pipeline:
         if not os.path.exists(file_path):
             os.makedirs(file_path)
         
-        tiff.imwrite(file_path + image_name + "irf.tif", self.__swap_time_axis(irf_array))
+        if not summed:
+            tiff.imwrite(file_path + image_name + "_irf.tif", self.__swap_time_axis(irf_array))
+        if summed:
+            tiff.imwrite(file_path + image_name + "_summed_irf.tif", self.__swap_time_axis(irf_array))
         
         # return the shifted irf values
         return np.array(final_irf_values, np.float32)
@@ -174,7 +184,7 @@ class Pipeline:
                     masked_image[row][col][:] = 0
              
         # save masked image
-        file_name = image_name + "masked_image"
+        file_name = image_name + "_masked_image"
         
         tiff.imwrite(output_path + file_name + ".tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
@@ -221,10 +231,10 @@ class Pipeline:
                 break
         
         # save sdt_data as tiff
-        tiff.imwrite(output_path + "summed_image.tif",  sdt_data)
+        tiff.imwrite(output_path + image_name + "_summed_image.tif",  sdt_data)
                     
         # make shifted irf tif
-        IRF_decay = self.__generate_irf(irf, "summed", sdt_data)
+        self.__generate_irf(irf, image_name, sdt_data, summed=True)
         
         
     
@@ -258,10 +268,12 @@ class Pipeline:
     # plots cell level phasor of one or more images
     #
     # param: images - list of of {"name", image_name, cells": cells, "values", cell_values, "IRF_decay":, IRF_decay} dicts
-    def plot_cell_phasor(self, images):
+    def plot_cell_phasor(self, images, title, show = False):
         # get cell (G,S) for each cell of image
         coords = list()
+        names = list()
         for image in images:
+            names.append(image["name"])
             data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.txt", "w")
             
             subcoords = list()
@@ -284,7 +296,7 @@ class Pipeline:
             data.close()
             
         # plot
-        visualizer.plot_phasor(coords) 
+        visualizer.plot_phasor(title, coords, names, show) 
         
 
 
