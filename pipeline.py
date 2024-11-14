@@ -230,8 +230,11 @@ class Pipeline:
                 sdt_data = sdt_data[i]
                 break
         
+        # generate metadata
+        metadata = self.__generate_metadata(sdt_data.shape[2])
+        
         # save sdt_data as tiff
-        tiff.imwrite(output_path + image_name + "_summed_image.tif",  sdt_data)
+        tiff.imwrite(output_path + image_name + "_summed_image.tif", self.__swap_time_axis(sdt_data), metadata=metadata)
                     
         # make shifted irf tif
         self.__generate_irf(irf, image_name, sdt_data, summed=True)
