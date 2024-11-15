@@ -66,7 +66,7 @@ def sum_sdts(sdt_path, mask_path):
             # path_mask = list(filter(re.compile(f".*{base_name}.*m_root*.*").search, list_masks_files))[0]
             # path_mito_mask = list(filter(re.compile(f".*{base_name}.*MitoMask.*").search, list_masks_files))[0]
         except IndexError:
-            print(f"Mask not found for : {path_sdt.name}")
+            # print(f"Mask not found for : {path_sdt.name}")
             continue
     
         # if not Path(path_mask).exists():
@@ -185,7 +185,7 @@ def sum_sdts(sdt_path, mask_path):
             sdt_decay_summed = sdt_decay_summed.astype(np.uint16)
         
         
-        print(path_output / f"{path_sdt.stem}_summed.sdt")
+        # print(path_output / f"{path_sdt.stem}_summed.sdt")
         num_ch, width, _, _ = im.shape
         path_file = path_output.absolute() / f"{path_sdt.stem}_summed.sdt" 
         # _write_sdt(path_file, sdt_decay_summed, resolution=width)

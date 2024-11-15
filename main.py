@@ -10,7 +10,6 @@ run flute pipeline
 from pipeline import Pipeline
 from pathlib import Path
 import argparse
-from sum_sdts import sum_roi_decays
 
 # get inputs
 parser = argparse.ArgumentParser()
@@ -21,9 +20,6 @@ args = parser.parse_args()
 
 # run pipeline
 pipeline = Pipeline()
-
-# sum sdts 
-sum_roi_decays.sum_sdts(Path(args.sdt_directory), Path(args.mask_directory))
 
 # mask and plot
 sdt_paths = [path for path in Path(args.sdt_directory).iterdir() if ".sdt" in path.name]

@@ -2,7 +2,7 @@
 """
 Created on Mon Sep 23 16:50:00 2024
 
-@author: Chris Yang
+@author: Chris Yang and Wenxuan Zhao
 
 Takes FLIM data as .sdt files, converts the .sdt files to single channel .tif
 files, masks the .tif files, then masks every single cell for the .tif files.
@@ -134,6 +134,7 @@ class Pipeline:
                     
     # mask entire sdt image and split into cells. Saves all as .tif files
     # Creates a shifted irf .tif for the sdt image also
+    # Finally creates a summed roi tiff and makes shifted irf for that too
     #
     # param: sdt - the path for the sdt to be masked
     # param: irf - path of txt file of irf
@@ -167,7 +168,7 @@ class Pipeline:
         
         # get the mask of the sdt
         for mask in masks_path.iterdir():
-            if (image_name in mask.name or image_name[:image_name.find("_summed")] in mask.name) and ".tif" in mask.name:
+            if image_name in mask.name and ".tif" in mask.name:
                 mask_path = mask
                 break
         
@@ -184,17 +185,16 @@ class Pipeline:
                     masked_image[row][col][:] = 0
              
         # save masked image
-        file_name = image_name + "_masked_image"
-        
-        tiff.imwrite(output_path + file_name + ".tif", 
+        tiff.imwrite(output_path + image_name + "_masked_image.tif", 
                      self.__swap_time_axis(masked_image), metadata=metadata)
         
-        # split masked image into single cells
+        # get cell values
         cell_values= np.unique(mask)
         cell_values = cell_values[1:]
 
-        # create image for every single cell
+        # single out each cell
         cell_images = list()
+        cell_sums = list()
         for i in range(len(cell_values)):
             # mask each cell
             cell_image = np.copy(masked_image)
@@ -204,41 +204,19 @@ class Pipeline:
                         cell_image[row][col][:] = 0
                     
             cell_images.append(cell_image)            
-            
+           
+        # make summed roi
+        summed_image = np.copy(masked_image)
+        
+        self.__generate_irf(irf, image_name, summed_image, summed=True)
+        
+        
+        # make summed irf
+        tiff.imwrite(output_path + image_name + "_summed_image.tif",
+                     self.__swap_time_axis(summed_image), metadata = metadata)
+           
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
-              
-    
-    
-    def process_summed(self, sdt, irf):
-        # create folders for all masked image and cells
-        image_name = sdt.name[:sdt.name.find("_summed")]
-        
-        output_path = "Outputs/" + image_name + "/"
-        if not os.path.exists(output_path):
-            raise Exception("expected path " + output_path + "not there?")    
-            
-        # get image datafrom sdt
-        sdt_data = sdt_reader.read_sdt150(sdt)
-             
-        # remove empty channel if needed
-        if (sdt_data.ndim == 4):
-            for i in range(sdt_data.shape[0]):
-                if (np.count_nonzero(sdt_data[i]) == 0):
-                    continue
-                
-                sdt_data = sdt_data[i]
-                break
-        
-        # generate metadata
-        metadata = self.__generate_metadata(sdt_data.shape[2])
-        
-        # save sdt_data as tiff
-        tiff.imwrite(output_path + image_name + "_summed_image.tif", self.__swap_time_axis(sdt_data), metadata=metadata)
-                    
-        # make shifted irf tif
-        self.__generate_irf(irf, image_name, sdt_data, summed=True)
-        
         
     
     # calculate the (G,S) coordinates of pixel
@@ -275,9 +253,18 @@ class Pipeline:
         # get cell (G,S) for each cell of image
         coords = list()
         names = list()
+        
+        create_csv = False
+        if len(images) == 1:
+            create_csv = True
+        
         for image in images:
             names.append(image["name"])
-            data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.txt", "w")
+            
+            if create_csv:
+                print(image["name"] + " opened")
+                data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.txt", "w")
+                data.write("Cell Number, G coordinate, S coordinate\n")
             
             subcoords = list()
             i = 0
@@ -291,12 +278,16 @@ class Pipeline:
                 subcoords.append(gs)
                 
                 # write gs to .txt file
-                data.write("Cell " + str(image["values"][i]) + ": G - " + str(gs[0]) + ", S - " + str(gs[1]) + "\n")
+                if create_csv:
+                    data.write(str(image["values"][i]) + ", " + str(gs[0]) + ", " + str(gs[1]) + "\n")
                 
                 i += 1
                 
             coords.append(subcoords)
-            data.close()
+            
+            if create_csv:
+                print(image["name"] + " closed")
+                data.close()
             
         # plot
         visualizer.plot_phasor(title, coords, names, show) 

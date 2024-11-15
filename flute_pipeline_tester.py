@@ -11,9 +11,9 @@ import tifffile as tiff
 import numpy as np
 from pathlib import Path
 import sdt_reader as sdt
-import flute_pipeline_visualizer as visualizer
 from pipeline import Pipeline
 import os
+from sum_sdts import sum_roi_decays
 
 # tests generate_metadata()
 #
@@ -260,10 +260,10 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data)
     
     # check tif
-    if not os.path.exists("Outputs/positive/positiveirf.tif"):
+    if not os.path.exists("Outputs/positive/positive_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/positive/positiveirf.tif") as tif:
+    with tiff.TiffFile("Outputs/positive/positive_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -298,10 +298,10 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data)
     
     # check tif
-    if not os.path.exists("Outputs/negative/negativeirf.tif"):
+    if not os.path.exists("Outputs/negative/negative_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/negative/negativeirf.tif") as tif:
+    with tiff.TiffFile("Outputs/negative/negative_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -336,10 +336,10 @@ def test_generate_irf():
     actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data)
     
     # check tif
-    if not os.path.exists("Outputs/no/noirf.tif"):
+    if not os.path.exists("Outputs/no/no_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/no/noirf.tif") as tif:
+    with tiff.TiffFile("Outputs/no/no_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -375,7 +375,9 @@ def test_generate_irf():
 #
 # return: false if bad
 def test_mask_image():
+    # setup
     testline = Pipeline()
+    sum_roi_decays.sum_sdts(Path("./"), Path("./"))
     
     # first image
     results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"))
@@ -408,7 +410,7 @@ def test_mask_image():
                     
                     
     # test saved masked image
-    masked_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024masked_image.tif"
+    masked_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_masked_image.tif"
     
     if not os.path.exists(masked_path):
         return False
@@ -419,6 +421,9 @@ def test_mask_image():
     test_image = np.swapaxes(test_image, 0, 2)
     test_image = np.swapaxes(test_image, 0, 1)
         
+    if test_image.shape != (256, 256, 256):
+        return False
+    
     for row in range(test_image.shape[0]):
         for col in range(test_image.shape[1]):
             if np.count_nonzero(test_image[row][col]) != 0:
@@ -432,7 +437,7 @@ def test_mask_image():
                     return False
                 
     # test saved irf
-    irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024irf.tif"
+    irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_irf.tif"
     
     if not os.path.exists(irf_path):
         return False
@@ -443,48 +448,50 @@ def test_mask_image():
     test_irf = np.swapaxes(test_irf, 0, 2)
     test_irf = np.swapaxes(test_irf, 0, 1)    
     
+    if test_irf.shape != (256, 256, 256):
+        return False
+    
     for row in range(test_irf.shape[0]):
         for col in range(test_image.shape[1]):
             if not np.array_equal(test_irf[row][col], results["IRF_decay"]):
                 return False
+
+    # test saved summed image
+    summed_image_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_image.tif"
+    
+    if not os.path.exists(summed_image_path):
+        return False
+    
+    sdt_data = sdt.read_sdt150(Path("dHL60_Control_DMSO_02_n-024_summed.sdt"))
+    
+    with tiff.TiffFile(summed_image_path) as summed_tif:    
+        summed_image = summed_tif.asarray()
+        
+    summed_image = np.swapaxes(summed_image, 0, 2)
+    summed_image = np.swapaxes(summed_image, 0, 1)
+    
+    if summed_image.shape != (256, 256, 256):
+        return False
+    
+    if not np.array_equal(summed_image, sdt_data):
+        return False
+    
+    # test saved summed irf
+    summed_irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.tif"
+   
+    if not os.path.exists(summed_irf_path):
+        return False
+    
+    with tiff.TiffFile(summed_irf_path) as summed_irf_tif:    
+        summed_irf = summed_irf_tif.asarray()    
+
+    if summed_irf.shape != (256, 256, 256):
+        return False
     
     # all good
     return True
 
-# tests plot_cell_phasor
-#
-# return: false if bad
-def test_plot_cell_phasor():
-    # setup
-    pipeline = Pipeline()
 
-    images = list()
-    
-    image = pipeline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"))
-    images.append(image) 
-
-    image = pipeline.mask_image(Path("dHL60_Control_na_01_n-010.sdt"), "Ch2_IRF_750.txt", Path("./"))
-    images.append(image) 
-        
-    # test first plot
-    test_coords = pipeline.plot_cell_phasor([images[0]])
-    
-    if len(test_coords) != 71:
-        return False
-    
-    # test second plot
-    test_coords = pipeline.plot_cell_phasor([images[1]])
-    
-    if len(test_coords) != 85:
-        return False
-    
-    # test plotting both
-    test_coords = pipeline.plot_cell_phasor(images)
-    
-    if len(test_coords) != 156:
-        return False
-    
-    return True
     
 
 # output "pass" or "fail" depending on if function passed or failed
@@ -503,7 +510,6 @@ print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))
 print("test_generate_irf(): " + pass_fail(test_generate_irf))
 print("test_mask_image(): " + pass_fail(test_mask_image))
-# print("test_plot_cell_phasor(): " + pass_fail(test_plot_cell_phasor))
 
 
 

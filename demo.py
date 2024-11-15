@@ -9,14 +9,9 @@ Demo
 
 from pipeline import Pipeline
 from pathlib import Path
-from sum_sdts import sum_roi_decays
-
 
 # run pipeline
 pipeline = Pipeline()
-
-# sum sdts 
-sum_roi_decays.sum_sdts(Path("./"), Path("./"))
 
 # mask and plot
 sdt_paths = [path for path in Path("./").iterdir() if ".sdt" in path.name]
