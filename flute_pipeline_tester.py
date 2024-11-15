@@ -13,7 +13,7 @@ from pathlib import Path
 import sdt_reader as sdt
 from pipeline import Pipeline
 import os
-from sum_sdts import sum_roi_decays
+import flute_pipeline_visualizer as visualizer
 
 # tests generate_metadata()
 #
@@ -377,12 +377,11 @@ def test_generate_irf():
 def test_mask_image():
     # setup
     testline = Pipeline()
-    sum_roi_decays.sum_sdts(Path("./"), Path("./"))
     
     # first image
     results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"))
     
-    with tiff.TiffFile("dHL60_Control_DMSO_02_n-024_photons_cellpose.tif") as mask_tif:
+    with tiff.TiffFile("dHL60_Control_DMSO_02_n-024_photons_cellpose.tiff") as mask_tif:
         mask = mask_tif.asarray()
     
     sdt_data = sdt.read_sdt150(Path("dHL60_Control_DMSO_02_n-024.sdt"))[1]
@@ -462,7 +461,7 @@ def test_mask_image():
     if not os.path.exists(summed_image_path):
         return False
     
-    sdt_data = sdt.read_sdt150(Path("dHL60_Control_DMSO_02_n-024_summed.sdt"))
+    sdt_data = sdt.read_sdt150(Path("dHL60_Control_DMSO_02_n-024_summed.sdt"))[1]
     
     with tiff.TiffFile(summed_image_path) as summed_tif:    
         summed_image = summed_tif.asarray()
@@ -489,7 +488,7 @@ def test_mask_image():
         return False
     
     # all good
-    return True
+    return True, summed_image, sdt_data
 
 
     
@@ -512,6 +511,15 @@ print("test_generate_irf(): " + pass_fail(test_generate_irf))
 print("test_mask_image(): " + pass_fail(test_mask_image))
 
 
+# wokred, fake, real = test_mask_image()
+
+# visualizer.visualize_tiff(fake, "fake")
+# visualizer.visualize_tiff(real, "real")
+
+# real = np.sum(real, axis=2)
+# fake = np.sum(fake, axis=2)
+
+# print(np.array_equal(real, fake))
 
 
 

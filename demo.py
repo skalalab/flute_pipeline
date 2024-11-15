@@ -14,7 +14,7 @@ from pathlib import Path
 pipeline = Pipeline()
 
 # mask and plot
-sdt_paths = [path for path in Path("./").iterdir() if ".sdt" in path.name]
+sdt_paths = [path for path in Path("./").iterdir() if ".sdt" in path.name and "_summed" not in path.name]
 
 images = list()
 

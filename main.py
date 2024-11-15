@@ -22,7 +22,7 @@ args = parser.parse_args()
 pipeline = Pipeline()
 
 # mask and plot
-sdt_paths = [path for path in Path(args.sdt_directory).iterdir() if ".sdt" in path.name]
+sdt_paths = [path for path in Path(args.sdt_directory).iterdir() if ".sdt" in path.name and "_summed" not in path.name]
 
 images = list()
 

@@ -203,17 +203,27 @@ class Pipeline:
                     if mask[row][col] != cell_values[i]:
                         cell_image[row][col][:] = 0
                     
-            cell_images.append(cell_image)            
+            cell_images.append(cell_image)    
+            
+            # sum each cell
+            cell_hist = np.sum(cell_image, 0)
+            cell_hist = np.sum(cell_hist, 0)
+            cell_sums.append(cell_hist)
            
         # make summed roi
         summed_image = np.copy(masked_image)
+        for i in range(len(cell_values)):
+            for row in range(mask.shape[0]):
+                for col in range(mask.shape[1]):
+                    if mask[row][col] == cell_values[i]:
+                        np.put(summed_image[row][col], range(summed_image.shape[2]), cell_sums[i])
         
-        self.__generate_irf(irf, image_name, summed_image, summed=True)
-        
-        
-        # make summed irf
         tiff.imwrite(output_path + image_name + "_summed_image.tif",
                      self.__swap_time_axis(summed_image), metadata = metadata)
+        
+        # make summed irf
+        self.__generate_irf(irf, image_name, summed_image, summed=True)
+
            
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      

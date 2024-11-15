@@ -95,19 +95,16 @@ def visualize_sdt(file):
             plt.show()
              
         
-# # intensity graph of single channel tiff file
-# #
-# # param: file is path of tiff file
-# def visualize_tiff(self, file, title):
-#     with tiff.TiffFile(file) as tif:
-#         tif_array = tif.asarray()
+# intensity graph of single channel tiff file
+#
+# param: file is path of tiff file
+def visualize_tiff(tif_array, title):
+    if (tif_array.ndim == 3):
+        tif_array = np.sum(tif_array, 2)
         
-#         if (tif_array.ndim == 3):
-#             tif_array = np.sum(tif_array, axis = self.time_axis)
-            
-#         plt.imshow(tif_array) 
-#         plt.title(title)
-#         plt.show() 
+    plt.imshow(tif_array) 
+    plt.title(title)
+    plt.show() 
 
 
 # # visualize cells and masked image of image
