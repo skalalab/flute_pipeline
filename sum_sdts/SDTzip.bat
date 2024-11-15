@@ -1,1 +1,0 @@
-SDTZip.exe -z Panc1_60s_summed_512_BH.sdt
