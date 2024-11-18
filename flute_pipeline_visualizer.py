@@ -7,7 +7,6 @@ Created on Fri Oct 11 15:45:30 2024
 visualizes the flute_pipeline outputs
 """
 
-import tifffile as tiff
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -55,13 +54,14 @@ def plot_phasor(title, coords, names, show = False):
     ax.text(0.8, 0.5, str(f * 1000) + "MHz", fontsize=15, fontweight = "bold")
     
     # data points
-    i = 0
-    for subcoords in coords:
+    # if more than one class, set the transparency of the points to 0.5
+    alpha = 0.5 if len(set(names)) > 1 else 1
+    for i, subcoords in enumerate(coords):
+        
         g = [gs[0] for gs in subcoords]
         s = [gs[1] for gs in subcoords]
         
-        plt.scatter(g, s, s=3, label=names[i])
-        i += 1
+        plt.scatter(g, s, s=3, label=names[i], alpha=alpha)
     
     # plot (if needed) and save
     plt.legend()
