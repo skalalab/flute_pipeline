@@ -5,3 +5,5 @@
 *.pyc
 *.png
 Dataset_2_For_Chris/
+.DS_Store
+Output/

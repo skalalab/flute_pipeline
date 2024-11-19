@@ -13,12 +13,21 @@ import matplotlib.pyplot as plt
 import sdt_reader as sdt
 
 # plots irf values against data values
-def plot_irf_data(irf, data):
-    plt.plot(irf / max(irf), label = "irf")
-    plt.plot(data / max(data), label = "data")
-    plt.legend()
+def plot_irfs_against_sdt(irf, shifted_irf, sdt_data):
+    sdt_data = np.sum(sdt_data, 1)
+    sdt_data = np.sum(sdt_data, 0)
+
+    fig, ax = plt.subplots(ncols=2, figsize=(6, 2))
+    ax[0].plot(irf / max(irf), label = "irf")
+    ax[0].plot(sdt_data / max(sdt_data), label = "sdt curve")
+    ax[0].legend()
+    ax[0].set_title("Before Shift") 
+    ax[1].plot(shifted_irf/ max(shifted_irf), label = "shifted_irf")
+    ax[1].plot(sdt_data / max(sdt_data), label = "sdt curve")
+    ax[1].legend()
+    ax[1].set_title("After Shift") 
     # plt.title(title)
-    plt.show()
+    return fig
     
 # plot a phasor plot
 #
@@ -76,24 +85,27 @@ def plot_phasor(title, coords, names, show = False):
 # param: file is path of sdt file
 def visualize_sdt(file):
     test_data = sdt.read_sdt150(file)
-    
+    fig, ax = plt.subplots(figsize=(4,4), dpi=300)
     # visualize
     if (test_data.ndim == 3):
-        plt.imshow(np.sum(test_data, axis = 2)) 
-        plt.title("SDT")
-        plt.show()
+        ax.imshow(np.sum(test_data, axis = 2)) 
+        ax.set_title("SDT")
+       # plt.show()
          
     elif (test_data.ndim == 4):
         for i in range(test_data.shape[0]):
             
             if (np.count_nonzero(test_data[i]) == 0):
                 continue
-            
-            print(i)
-            plt.imshow(np.sum(test_data[i], axis = 2))
-            plt.title("SDT")
-            plt.show()
-             
+            else: 
+                ax.imshow(np.sum(test_data[i], axis = 2))
+                ax.set_title("SDT")
+                test_data = test_data[i]
+                break
+    ax.axis('off')
+    plt.tight_layout(pad=0)
+
+    return fig, test_data
         
 # intensity graph of single channel tiff file
 #

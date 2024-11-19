@@ -140,14 +140,10 @@ class Pipeline:
     # param: irf - path of txt file of irf
     # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf, masks_path):
+    def mask_image(self, sdt, irf, masks_path, flute_mode = True):
         # create folders for all masked image and cells
         image_name = sdt.name[:sdt.name.find(".sdt")]
-        
-        output_path = "Outputs/" + image_name + "/"
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-        
+
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
              
@@ -167,11 +163,14 @@ class Pipeline:
         IRF_decay = self.__generate_irf(irf, image_name, sdt_data)
         
         # get the mask of the sdt
-        for mask in masks_path.iterdir():
-            if image_name in mask.name and ".tif" in mask.name:
-                mask_path = mask
-                break
-        
+        if os.path.isdir(masks_path): 
+            for mask in masks_path.iterdir():
+                if image_name in mask.name and ".tif" in mask.name:
+                    mask_path = mask
+                    break
+        else:
+            mask_path = masks_path
+
         # now mask the image
         with tiff.TiffFile(mask_path) as mask_tif:
             mask = mask_tif.asarray()
@@ -183,11 +182,7 @@ class Pipeline:
             for col in range(mask.shape[1]):
                 if mask[row][col] == 0:
                     masked_image[row][col][:] = 0
-             
-        # save masked image
-        tiff.imwrite(output_path + image_name + "_masked_image.tif", 
-                     self.__swap_time_axis(masked_image), metadata=metadata)
-        
+                    
         # get cell values
         cell_values= np.unique(mask)
         cell_values = cell_values[1:]
@@ -209,26 +204,36 @@ class Pipeline:
             cell_hist = np.sum(cell_image, 0)
             cell_hist = np.sum(cell_hist, 0)
             cell_sums.append(cell_hist)
-           
-        # make summed roi
-        summed_image = np.copy(masked_image)
-        for i in range(len(cell_values)):
-            for row in range(mask.shape[0]):
-                for col in range(mask.shape[1]):
-                    if mask[row][col] == cell_values[i]:
-                        np.put(summed_image[row][col], range(summed_image.shape[2]), cell_sums[i])
         
-        tiff.imwrite(output_path + image_name + "_summed_image.tif",
-                     self.__swap_time_axis(summed_image), metadata = metadata)
-        
-        # make summed irf
-        self.__generate_irf(irf, image_name, summed_image, summed=True)
+        if flute_mode: 
+            # make summed roi
+            summed_image = np.copy(masked_image)
+            for i in range(len(cell_values)):
+                for row in range(mask.shape[0]):
+                    for col in range(mask.shape[1]):
+                        if mask[row][col] == cell_values[i]:
+                            np.put(summed_image[row][col], range(summed_image.shape[2]), cell_sums[i])
+            
+            # writing outputs for flute 
+            # _masked_image.tif, _summed_image.tif, _summed_irf.tif (irf for ROI-summed image)
+            output_path = "Outputs/" + image_name + "/"
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
 
-           
+            # save masked image
+            tiff.imwrite(output_path + image_name + "_masked_image.tif", 
+                        self.__swap_time_axis(masked_image), metadata=metadata)
+            
+            tiff.imwrite(output_path + image_name + "_summed_image.tif",
+                        self.__swap_time_axis(summed_image), metadata = metadata)
+            
+            # make summed irf
+            self.__generate_irf(irf, image_name, summed_image, summed=True)
+
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
         
-    
+
     # calculate the (G,S) coordinates of pixel
     #
     # param: cell-hist - summed time bins of cell
@@ -302,7 +307,11 @@ class Pipeline:
         # plot
         visualizer.plot_phasor(title, coords, names, show) 
         
-
+    def get_cell_phasor(self, cell, IRF_decay):
+        cell_hist = np.sum(cell, 0)
+        cell_hist = np.sum(cell_hist, 0)
+        
+        return self.__get_GS(cell_hist, IRF_decay)
 
     # # testing purposese only
     # def plot_pixel_phasor(self, image, IRF_decay):
