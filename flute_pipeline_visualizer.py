@@ -11,6 +11,7 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import sdt_reader as sdt
+import tifffile as tiff
 
 # plots irf values against data values
 def plot_irfs_against_sdt(irf, shifted_irf, sdt_data):
@@ -110,13 +111,22 @@ def visualize_sdt(file):
 # intensity graph of single channel tiff file
 #
 # param: file is path of tiff file
-def visualize_tiff(tif_array, title):
+def visualize_tiff(tif_path, title, cell_label=-1):
+    with tiff.TiffFile(tif_path) as tif:
+        tif_array = tif.asarray()
+    fig, ax = plt.subplots(figsize=(4,4), dpi=300)
     if (tif_array.ndim == 3):
         tif_array = np.sum(tif_array, 2)
-        
-    plt.imshow(tif_array) 
-    plt.title(title)
-    plt.show() 
+    
+    # by default show all cell masks (if the tif is a mask), but user can specify a cell label to show only that cell mask
+    if cell_label >= 0:
+        tif_array = tif_array == cell_label
+
+    ax.imshow(tif_array) 
+    ax.set_title(title)
+    ax.axis('off')
+    plt.tight_layout(pad=0)
+    return fig
 
 
 # # visualize cells and masked image of image
