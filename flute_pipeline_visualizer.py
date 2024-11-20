@@ -11,14 +11,7 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import sdt_reader as sdt
-
-# plots irf values against data values
-def plot_irf_data(irf, data):
-    plt.plot(irf / max(irf), label = "irf")
-    plt.plot(data / max(data), label = "data")
-    plt.legend()
-    # plt.title(title)
-    plt.show()
+import tifffile as tiff
     
 # plot a phasor plot
 #
@@ -98,30 +91,26 @@ def visualize_sdt(file):
 # intensity graph of single channel tiff file
 #
 # param: file is path of tiff file
-def visualize_tiff(tif_array, title):
+def visualize_tiff(file, title):
+    with tiff.TiffFile(file) as tif:
+        tif_array = tif.asarray()
+    
     if (tif_array.ndim == 3):
+        tif_array = np.swapaxes(tif_array, 0,2)
+        tif_array = np.swapaxes(tif_array, 0,1)
         tif_array = np.sum(tif_array, 2)
         
     plt.imshow(tif_array) 
     plt.title(title)
     plt.show() 
+    
+    
+# plots irf values against data values
+def plot_irf_data(irf, data):
+    plt.plot(irf / max(irf), label = "irf")
+    plt.plot(data / max(data), label = "data")
+    plt.legend()
+    # plt.title(title)
+    plt.show()
 
-
-# # visualize cells and masked image of image
-# def visualize_masked(self, masked_folder_path):
-#     for image in Path(masked_folder_path).iterdir():
-#         self.visualize_tiff(image, image.name)
-
-        
-# # visualize all sdt files
-# def visualize_all_sdt(self):
-#     sdt_paths = [path for path in Path("SDTs").iterdir()]
-#     for path in sdt_paths:
-#         self.visualize_sdt(path)
-
-# # visualize all original tif
-# def visualize_all_original_tiff(self):
-#     tiff_paths = [path for path in Path("TIFFs/Original").iterdir()]
-#     for path in tiff_paths:
-#         self.visualize_tiff(path, "TIFF")
 
