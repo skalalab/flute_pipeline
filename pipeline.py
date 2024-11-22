@@ -273,7 +273,7 @@ class Pipeline:
             
             if create_csv:
                 print(image["name"] + " opened")
-                data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.txt", "w")
+                data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.csv", "w")
                 data.write("Cell Number, G coordinate, S coordinate\n")
             
             subcoords = list()
