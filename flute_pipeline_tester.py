@@ -13,7 +13,7 @@ from pathlib import Path
 import sdt_reader as sdt
 from pipeline import Pipeline
 import os
-import flute_pipeline_visualizer as visualizer
+import csv
 
 # tests generate_metadata()
 #
@@ -250,7 +250,7 @@ def test_generate_irf():
     
     try:
         testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data)
-    except Exception as e:
+    except:
         return False
         
     # positive shift
@@ -282,6 +282,22 @@ def test_generate_irf():
     actual_tif = np.swapaxes(actual_tif, 0, 1)
     
     if not np.array_equal(actual_tif, data):
+        return False
+    
+    # check csv
+    if not os.path.exists("Outputs/positive/positive_irf.csv"):
+        return False
+    
+    with open("Outputs/positive/positive_irf.csv", mode = "r") as file:
+        csv_file = csv.reader(file)
+        
+        csv_values = list()
+        for lines in csv_file:
+            csv_values.append(int(float(lines[0])))
+            
+    if csv_values != values:
+        print(csv_values)
+        print(values)
         return False
         
     # check return values
@@ -321,7 +337,21 @@ def test_generate_irf():
     
     if not np.array_equal(actual_tif, data):
         return False
+    
+    # check csv
+    if not os.path.exists("Outputs/negative/negative_irf.csv"):
+        return False
+    
+    with open("Outputs/negative/negative_irf.csv", mode = "r") as file:
+        csv_file = csv.reader(file)
         
+        csv_values = list()
+        for lines in csv_file:
+            csv_values.append(int(float(lines[0])))
+            
+    if csv_values != values:
+        return False
+    
     # check return values
     if list(actual_values) != values:
         return False
@@ -360,6 +390,20 @@ def test_generate_irf():
     if not np.array_equal(actual_tif, data):
         return False
         
+    # check csv
+    if not os.path.exists("Outputs/no/no_irf.csv"):
+        return False
+    
+    with open("Outputs/no/no_irf.csv", mode = "r") as file:
+        csv_file = csv.reader(file)
+        
+        csv_values = list()
+        for lines in csv_file:
+            csv_values.append(int(float(lines[0])))
+            
+    if csv_values != values:
+        return False
+    
     # check return values
     if list(actual_values) != values:
         return False
@@ -434,7 +478,28 @@ def test_mask_image():
             else:
                 if mask[row][col] != 0:
                     return False
-                
+             
+    # test irf csv
+    csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_irf.csv"
+    
+    if not os.path.exists(csv_path):
+        return False
+    
+    with open(csv_path, mode = "r") as file:
+        csv_file = csv.reader(file)
+        
+        csv_values = list()
+        for lines in csv_file:
+            csv_values.append(str(round(float(lines[0]), 1)))
+            
+    actual_values = list()
+    
+    for value in results["IRF_decay"]:
+        actual_values.append(str(round(value, 1)))
+        
+    if csv_values != actual_values:
+        return False        
+    
     # test saved irf
     irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_irf.tif"
     
@@ -471,9 +536,25 @@ def test_mask_image():
     
     if summed_image.shape != (256, 256, 256):
         return False
-    
+        
     if not np.array_equal(summed_image, sdt_data):
         return False
+    
+    # test summed irf csv
+    summed_csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.csv"
+    
+    if not os.path.exists(summed_csv_path):
+        return False
+    
+    with open(summed_csv_path, mode = "r") as file:
+        csv_file = csv.reader(file)
+        
+        csv_values = list()
+        for lines in csv_file:
+            csv_values.append(float(lines[0]))   
+             
+    if len(csv_values) != 256:
+        return False  
     
     # test saved summed irf
     summed_irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.tif"

@@ -70,6 +70,15 @@ class Pipeline:
             
         return shifted.astype(data_type)
           
+    # write csv of irf values
+    #
+    # param: irf_values - list of irf values to write
+    # parm: file_path - file path/name
+    def __irf_csv(self, irf_values, file_path):
+        with open(file_path, "w") as csv:
+            for value in irf_values:
+                csv.write(str(value) + "\n")
+    
     
     # shift IRF to max correlation with data. Then, make .tif of the IRF
     #
@@ -127,6 +136,13 @@ class Pipeline:
             tiff.imwrite(file_path + image_name + "_irf.tif", self.__swap_time_axis(irf_array))
         if summed:
             tiff.imwrite(file_path + image_name + "_summed_irf.tif", self.__swap_time_axis(irf_array))
+        
+        # save irf values as csv
+        if not summed:
+            self.__irf_csv(final_irf_values, file_path + image_name + "_irf.csv")
+        if summed:
+            self.__irf_csv(final_irf_values, file_path + image_name + "_summed_irf.csv")
+                
         
         # return the shifted irf values
         return np.array(final_irf_values, np.float32)
@@ -224,7 +240,6 @@ class Pipeline:
         # make summed irf
         self.__generate_irf(irf, image_name, summed_image, summed=True)
 
-           
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
         
