@@ -34,7 +34,7 @@ for path in sdt_paths:
     else:
         pipeline.process_summed(path, args.irf)
     
-pipeline.plot_cell_phasor(images, "summary") 
+pipeline.plot_cell_phasor(images, "summary", csv=False) 
 
 print("success...")  
     

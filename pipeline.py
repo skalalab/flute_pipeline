@@ -274,19 +274,15 @@ class Pipeline:
     # plots cell level phasor of one or more images
     #
     # param: images - list of of {"name", image_name, cells": cells, "values", cell_values, "IRF_decay":, IRF_decay} dicts
-    def plot_cell_phasor(self, images, title, show = False):
+    def plot_cell_phasor(self, images, title, show = False, csv = True):
         # get cell (G,S) for each cell of image
         coords = list()
         names = list()
         
-        create_csv = False
-        if len(images) == 1:
-            create_csv = True
-        
         for image in images:
             names.append(image["name"])
             
-            if create_csv:
+            if csv:
                 print(image["name"] + " opened")
                 data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.csv", "w")
                 data.write("Cell Number, G coordinate, S coordinate\n")
@@ -303,43 +299,16 @@ class Pipeline:
                 subcoords.append(gs)
                 
                 # write gs to .txt file
-                if create_csv:
+                if csv:
                     data.write(str(image["values"][i]) + ", " + str(gs[0]) + ", " + str(gs[1]) + "\n")
                 
                 i += 1
                 
             coords.append(subcoords)
             
-            if create_csv:
+            if csv:
                 print(image["name"] + " closed")
                 data.close()
             
         # plot
         visualizer.plot_phasor(title, coords, names, show) 
-        
-
-
-    # # testing purposese only
-    # def plot_pixel_phasor(self, image, IRF_decay):
-    #     coords = list()
-    #     for row in range(image.shape[0]):
-    #         for col in range(image.shape[1]):
-    #             if np.count_nonzero(image[row,col]) != 0:
-    #                 coords.append(self.__get_GS(image[row,col], IRF_decay))
-                
-    #     visualizer.plot_phasor(coords)
-            
-        
-    # # testing purposes only
-    # def __correlate_max_peak(self, irf, data, return_array = False):
-    #     # get max indexes
-    #     irf_max_index = np.where(irf == max(irf))[0][0]
-    #     data_max_index = np.where(data == max(data))[0][0]
-        
-    #     # shift
-    #     shift = data_max_index - irf_max_index
-        
-    #     if return_array is True:
-    #         return self.__shift(irf, shift)
-        
-    #     return shift
