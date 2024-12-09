@@ -290,6 +290,7 @@ def test_generate_irf():
     
     with open("Outputs/positive/positive_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
+        next(csv_file, None)
         
         csv_values = list()
         for lines in csv_file:
@@ -344,6 +345,7 @@ def test_generate_irf():
     
     with open("Outputs/negative/negative_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
+        next(csv_file, None)
         
         csv_values = list()
         for lines in csv_file:
@@ -396,7 +398,8 @@ def test_generate_irf():
     
     with open("Outputs/no/no_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
-        
+        next(csv_file, None)
+
         csv_values = list()
         for lines in csv_file:
             csv_values.append(int(float(lines[0])))
@@ -487,7 +490,8 @@ def test_mask_image():
     
     with open(csv_path, mode = "r") as file:
         csv_file = csv.reader(file)
-        
+        next(csv_file, None)
+
         csv_values = list()
         for lines in csv_file:
             csv_values.append(str(round(float(lines[0]), 1)))
@@ -548,13 +552,20 @@ def test_mask_image():
     
     with open(summed_csv_path, mode = "r") as file:
         csv_file = csv.reader(file)
-        
+        next(csv_file, None)
+
         csv_values = list()
         for lines in csv_file:
-            csv_values.append(float(lines[0]))   
-             
-    if len(csv_values) != 256:
-        return False  
+            csv_values.append(str(round(float(lines[0]), 1)))
+    
+    actual_values = list()
+
+    for value in results["Summed_decay"]:
+        actual_values.append(str(round(value,1)))
+
+    if csv_values != actual_values:
+        return False              
+    
     
     # test saved summed irf
     summed_irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.tif"
@@ -565,12 +576,20 @@ def test_mask_image():
     with tiff.TiffFile(summed_irf_path) as summed_irf_tif:    
         summed_irf = summed_irf_tif.asarray()    
 
+    summed_irf = np.swapaxes(summed_irf, 0, 2)
+    summed_irf = np.swapaxes(summed_irf, 0, 1)
+
     if summed_irf.shape != (256, 256, 256):
         return False
+
+    for row in range(summed_irf.shape[0]):
+        for col in range(summed_irf.shape[1]):
+            if not np.array_equal(summed_irf[row][col], results["Summed_decay"]):
+                return False
+            
     
     # all good
     return True, summed_image, sdt_data
-
 
     
 
@@ -590,17 +609,6 @@ print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))
 print("test_generate_irf(): " + pass_fail(test_generate_irf))
 print("test_mask_image(): " + pass_fail(test_mask_image))
-
-
-# wokred, fake, real = test_mask_image()
-
-# visualizer.visualize_tiff(fake, "fake")
-# visualizer.visualize_tiff(real, "real")
-
-# real = np.sum(real, axis=2)
-# fake = np.sum(fake, axis=2)
-
-# print(np.array_equal(real, fake))
 
 
 

@@ -76,8 +76,9 @@ class Pipeline:
     # parm: file_path - file path/name
     def __irf_csv(self, irf_values, file_path):
         with open(file_path, "w") as csv:
+            csv.write("value,\n")
             for value in irf_values:
-                csv.write(str(value) + "\n")
+                csv.write(str(value) + ",\n")
     
     
     # shift IRF to max correlation with data. Then, make .tif of the IRF
@@ -86,7 +87,7 @@ class Pipeline:
     # param: image_name - name of image of data
     # param: image_data - the data of the .sdt
     # return: the shifted irf values
-    def __generate_irf(self, irf_path, image_name, image_data, summed = False):
+    def __generate_irf(self, irf_path, image_name, image_data, output_path, summed = False):
         # get the irf values from .txt file 
         with open(irf_path) as irf:
             irf_values = [int(line) for line in irf if line.strip()]
@@ -127,21 +128,19 @@ class Pipeline:
                 
         # save irf as tif 
         # visualizer.plot_irf_data(final_irf_values, data_values)
-        file_path = "Outputs/" + image_name + "/"
-        
-        if not os.path.exists(file_path):
-            os.makedirs(file_path)
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
         
         if not summed:
-            tiff.imwrite(file_path + image_name + "_irf.tif", self.__swap_time_axis(irf_array))
+            tiff.imwrite(output_path + image_name + "_irf.tif", self.__swap_time_axis(irf_array))
         if summed:
-            tiff.imwrite(file_path + image_name + "_summed_irf.tif", self.__swap_time_axis(irf_array))
+            tiff.imwrite(output_path + image_name + "_summed_irf.tif", self.__swap_time_axis(irf_array))
         
         # save irf values as csv
         if not summed:
-            self.__irf_csv(final_irf_values, file_path + image_name + "_irf.csv")
+            self.__irf_csv(final_irf_values, output_path + image_name + "_irf.csv")
         if summed:
-            self.__irf_csv(final_irf_values, file_path + image_name + "_summed_irf.csv")
+            self.__irf_csv(final_irf_values, output_path + image_name + "_summed_irf.csv")
                 
         
         # return the shifted irf values
@@ -156,31 +155,34 @@ class Pipeline:
     # param: irf - path of txt file of irf
     # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf, masks_path):
-        # create folders for all masked image and cells
-        image_name = sdt.name[:sdt.name.find(".sdt")]
-        
-        output_path = "Outputs/" + image_name + "/"
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-        
+    def mask_image(self, sdt, irf, masks_path, channel):
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
              
-        # remove empty channel if needed
-        if (sdt_data.ndim == 4):
+        # find nonempty channel if needed
+        if channel == -1:
             for i in range(sdt_data.shape[0]):
                 if (np.count_nonzero(sdt_data[i]) == 0):
                     continue
                 
                 sdt_data = sdt_data[i]
+                channel = i
                 break
+        else:
+            sdt_data = sdt_data[channel]
             
+        # create folder for output
+        image_name = sdt.name[:sdt.name.find(".sdt")]
+        
+        output_path = "Outputs/" + image_name + "/channel" + str(channel) + "/"
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)    
+        
         # generate metadata
         metadata = self.__generate_metadata(sdt_data.shape[2])
                     
         # make shifted irf tif
-        IRF_decay = self.__generate_irf(irf, image_name, sdt_data)
+        IRF_decay = self.__generate_irf(irf, image_name, sdt_data, output_path)
         
         # get the mask of the sdt
         for mask in masks_path.iterdir():
@@ -238,10 +240,10 @@ class Pipeline:
                      self.__swap_time_axis(summed_image), metadata = metadata)
         
         # make summed irf
-        self.__generate_irf(irf, image_name, summed_image, summed=True)
+        summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, output_path, summed=True)
 
         # return cell_images, cell value, IRF_decay, and output path as tuple
-        return {"name": image_name, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
+        return {"name": image_name, "channel": channel, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay, "Summed_decay": summed_IRF_decay}      
         
     
     # calculate the (G,S) coordinates of pixel
@@ -280,12 +282,13 @@ class Pipeline:
         names = list()
         
         for image in images:
-            names.append(image["name"])
+            image_name = image["name"] + "_channel" + str(image["channel"])
+            names.append(image_name)
             
             if csv:
-                print(image["name"] + " opened")
-                data = open("Outputs/" + image["name"] + "/" + image["name"] + "data.csv", "w")
-                data.write("Cell Number, G coordinate, S coordinate\n")
+                print(image_name + " opened")
+                data = open("Outputs/" + image["name"] + "/channel" + str(image["channel"]) + "/" + image_name + "data.csv", "w")
+                data.write("Cell Number, G coordinate, S coordinate,\n")
             
             subcoords = list()
             i = 0
@@ -300,14 +303,14 @@ class Pipeline:
                 
                 # write gs to .txt file
                 if csv:
-                    data.write(str(image["values"][i]) + ", " + str(gs[0]) + ", " + str(gs[1]) + "\n")
+                    data.write(str(image["values"][i]) + ", " + str(gs[0]) + ", " + str(gs[1]) + ",\n")
                 
                 i += 1
                 
             coords.append(subcoords)
             
             if csv:
-                print(image["name"] + " closed")
+                print(image_name + " closed")
                 data.close()
             
         # plot
