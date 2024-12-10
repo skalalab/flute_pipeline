@@ -87,7 +87,7 @@ class Pipeline:
     # param: image_name - name of image of data
     # param: image_data - the data of the .sdt
     # return: the shifted irf values
-    def __generate_irf(self, irf_path, image_name, image_data, output_path, channel, summed = False):
+    def __generate_irf(self, irf_path, image_name, image_data, output_path, channel, summed = False, ui_mode = False):
         # get the irf values from .txt file 
         with open(irf_path) as irf:
             irf_values = [int(line) for line in irf if line.strip()]
@@ -128,19 +128,20 @@ class Pipeline:
                 
         # save irf as tif 
         # visualizer.plot_irf_data(final_irf_values, data_values)
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-        
-        if not summed:
-            tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_irf.tif", self.__swap_time_axis(irf_array))
-        if summed:
-            tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_summed_irf.tif", self.__swap_time_axis(irf_array))
-        
-        # save irf values as csv
-        if not summed:
-            self.__irf_csv(final_irf_values, output_path + image_name + "_channel" + str(channel) + "_irf.csv")
-        if summed:
-            self.__irf_csv(final_irf_values, output_path + image_name + "_channel" + str(channel) + "_summed_irf.csv")
+        if not ui_mode:
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            
+            if not summed:
+                tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_irf.tif", self.__swap_time_axis(irf_array))
+            if summed:
+                tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_summed_irf.tif", self.__swap_time_axis(irf_array))
+            
+            # save irf values as csv
+            if not summed:
+                self.__irf_csv(final_irf_values, output_path + image_name + "_channel" + str(channel) + "_irf.csv")
+            if summed:
+                self.__irf_csv(final_irf_values, output_path + image_name + "_channel" + str(channel) + "_summed_irf.csv")
                 
         
         # return the shifted irf values
@@ -155,7 +156,7 @@ class Pipeline:
     # param: irf - path of txt file of irf
     # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf, masks_path, channel):
+    def mask_image(self, sdt, irf, masks_path, channel, ui_mode = False):
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
              
@@ -185,10 +186,13 @@ class Pipeline:
         IRF_decay = self.__generate_irf(irf, image_name, sdt_data, output_path, channel)
         
         # get the mask of the sdt
-        for mask in masks_path.iterdir():
-            if image_name in mask.name and ".tif" in mask.name:
-                mask_path = mask
-                break
+        if os.path.isdir(masks_path): 
+            for mask in masks_path.iterdir():
+                if image_name in mask.name and ".tif" in mask.name:
+                    mask_path = mask
+                    break
+        else:
+            mask_path = masks_path
         
         # now mask the image
         with tiff.TiffFile(mask_path) as mask_tif:
@@ -203,8 +207,9 @@ class Pipeline:
                     masked_image[row][col][:] = 0
              
         # save masked image
-        tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_masked_image.tif", 
-                     self.__swap_time_axis(masked_image), metadata=metadata)
+        if not ui_mode:
+            tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_masked_image.tif", 
+                         self.__swap_time_axis(masked_image), metadata=metadata)
         
         # get cell values
         cell_values= np.unique(mask)
@@ -229,18 +234,19 @@ class Pipeline:
             cell_sums.append(cell_hist)
            
         # make summed roi
-        summed_image = np.copy(masked_image)
-        for i in range(len(cell_values)):
-            for row in range(mask.shape[0]):
-                for col in range(mask.shape[1]):
-                    if mask[row][col] == cell_values[i]:
-                        np.put(summed_image[row][col], range(summed_image.shape[2]), cell_sums[i])
-        
-        tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_summed_image.tif",
-                     self.__swap_time_axis(summed_image), metadata = metadata)
-        
-        # make summed irf
-        summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, output_path, channel, summed=True)
+        if not ui_mode:
+            summed_image = np.copy(masked_image)
+            for i in range(len(cell_values)):
+                for row in range(mask.shape[0]):
+                    for col in range(mask.shape[1]):
+                        if mask[row][col] == cell_values[i]:
+                            np.put(summed_image[row][col], range(summed_image.shape[2]), cell_sums[i])
+            
+            tiff.imwrite(output_path + image_name + "_channel" + str(channel) + "_summed_image.tif",
+                         self.__swap_time_axis(summed_image), metadata = metadata)
+            
+            # make summed irf
+            summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, output_path, channel, summed=True)
 
         # return cell_images, cell value, IRF_decay, and output path as tuple
         return {"name": image_name, "channel": channel, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay, "Summed_decay": summed_IRF_decay}      
