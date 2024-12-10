@@ -183,7 +183,7 @@ class Pipeline:
         metadata = self.__generate_metadata(sdt_data.shape[2])
                     
         # make shifted irf tif
-        IRF_decay = self.__generate_irf(irf, image_name, sdt_data, output_path, channel)
+        IRF_decay = self.__generate_irf(irf, image_name, sdt_data, output_path, channel, ui_mode)
         
         # get the mask of the sdt
         if os.path.isdir(masks_path): 
