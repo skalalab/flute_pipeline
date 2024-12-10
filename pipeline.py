@@ -156,7 +156,7 @@ class Pipeline:
     # param: irf - path of txt file of irf
     # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf, masks_path, channel, ui_mode = False):
+    def mask_image(self, sdt, irf, masks_path, channel = -1, ui_mode = False):
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
              
@@ -249,7 +249,11 @@ class Pipeline:
             summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, output_path, channel, summed=True)
 
         # return cell_images, cell value, IRF_decay, and output path as tuple
-        return {"name": image_name, "channel": channel, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay, "Summed_decay": summed_IRF_decay}      
+        if not ui_mode:
+            return {"name": image_name, "channel": channel, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay, "Summed_decay": summed_IRF_decay}   
+        else:
+            return {"name": image_name, "channel": channel, "cells": cell_images, "values": cell_values, "IRF_decay": IRF_decay}      
+
         
     
     # calculate the (G,S) coordinates of pixel
@@ -321,3 +325,11 @@ class Pipeline:
             
         # plot
         visualizer.plot_phasor(title, coords, names, show) 
+        
+    
+
+    def get_cell_phasor(self, cell, IRF_decay):
+        cell_hist = np.sum(cell, 0)
+        cell_hist = np.sum(cell_hist, 0)
+        
+        return self.__get_GS(cell_hist, IRF_decay)
