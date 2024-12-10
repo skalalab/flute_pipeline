@@ -225,7 +225,7 @@ def test_generate_irf():
     
     exception = False
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data)
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, "Outputs/invalid/", 0)
     except:
        exception = True
        
@@ -237,7 +237,7 @@ def test_generate_irf():
     
     exception = False
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data)
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, "Outputs/invalid/", 0)
     except:
        exception = True
        
@@ -249,7 +249,7 @@ def test_generate_irf():
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data)
+        testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data, "Outputs/whitespace/", 0)
     except:
         return False
         
@@ -257,13 +257,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data, "Outputs/positive/", 0)
     
     # check tif
-    if not os.path.exists("Outputs/positive/positive_irf.tif"):
+    if not os.path.exists("Outputs/positive/positive_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/positive/positive_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/positive/positive_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -285,10 +285,10 @@ def test_generate_irf():
         return False
     
     # check csv
-    if not os.path.exists("Outputs/positive/positive_irf.csv"):
+    if not os.path.exists("Outputs/positive/positive_channel0_irf.csv"):
         return False
     
-    with open("Outputs/positive/positive_irf.csv", mode = "r") as file:
+    with open("Outputs/positive/positive_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
         
@@ -312,13 +312,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data, "Outputs/Negative/", 0)
     
     # check tif
-    if not os.path.exists("Outputs/negative/negative_irf.tif"):
+    if not os.path.exists("Outputs/negative/negative_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/negative/negative_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/negative/negative_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -340,10 +340,10 @@ def test_generate_irf():
         return False
     
     # check csv
-    if not os.path.exists("Outputs/negative/negative_irf.csv"):
+    if not os.path.exists("Outputs/negative/negative_channel0_irf.csv"):
         return False
     
-    with open("Outputs/negative/negative_irf.csv", mode = "r") as file:
+    with open("Outputs/negative/negative_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
         
@@ -365,13 +365,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data, "Outputs/no/", 0)
     
     # check tif
-    if not os.path.exists("Outputs/no/no_irf.tif"):
+    if not os.path.exists("Outputs/no/no_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/no/no_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/no/no_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -393,10 +393,10 @@ def test_generate_irf():
         return False
         
     # check csv
-    if not os.path.exists("Outputs/no/no_irf.csv"):
+    if not os.path.exists("Outputs/no/no_channel0_irf.csv"):
         return False
     
-    with open("Outputs/no/no_irf.csv", mode = "r") as file:
+    with open("Outputs/no/no_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
 
@@ -426,7 +426,7 @@ def test_mask_image():
     testline = Pipeline()
     
     # first image
-    results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"))
+    results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"), 1)
     
     with tiff.TiffFile("dHL60_Control_DMSO_02_n-024_photons_cellpose.tiff") as mask_tif:
         mask = mask_tif.asarray()
@@ -456,7 +456,7 @@ def test_mask_image():
                     
                     
     # test saved masked image
-    masked_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_masked_image.tif"
+    masked_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_masked_image.tif"
     
     if not os.path.exists(masked_path):
         return False
@@ -483,7 +483,7 @@ def test_mask_image():
                     return False
              
     # test irf csv
-    csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_irf.csv"
+    csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_irf.csv"
     
     if not os.path.exists(csv_path):
         return False
@@ -505,7 +505,7 @@ def test_mask_image():
         return False        
     
     # test saved irf
-    irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_irf.tif"
+    irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_irf.tif"
     
     if not os.path.exists(irf_path):
         return False
@@ -525,7 +525,7 @@ def test_mask_image():
                 return False
 
     # test saved summed image
-    summed_image_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_image.tif"
+    summed_image_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_summed_image.tif"
     
     if not os.path.exists(summed_image_path):
         return False
@@ -545,7 +545,7 @@ def test_mask_image():
         return False
     
     # test summed irf csv
-    summed_csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.csv"
+    summed_csv_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_summed_irf.csv"
     
     if not os.path.exists(summed_csv_path):
         return False
@@ -568,7 +568,7 @@ def test_mask_image():
     
     
     # test saved summed irf
-    summed_irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/dHL60_Control_DMSO_02_n-024_summed_irf.tif"
+    summed_irf_path = "Outputs/dHL60_Control_DMSO_02_n-024/channel1/dHL60_Control_DMSO_02_n-024_channel1_summed_irf.tif"
    
     if not os.path.exists(summed_irf_path):
         return False
