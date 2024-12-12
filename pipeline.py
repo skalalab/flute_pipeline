@@ -87,10 +87,10 @@ class Pipeline:
     # param: image_name - name of image of data
     # param: image_data - the data of the .sdt
     # return: the shifted irf values
-    def __generate_irf(self, irf_path, image_name, image_data, output_path, channel, summed = False, ui_mode = False):
+    def __generate_irf(self, irf_path, image_name, image_data, channel, column, summed = False, ui_mode = False):
         # get the irf values from .txt file 
         with open(irf_path) as irf:
-            irf_values = [int(line) for line in irf if line.strip()]
+            irf_values = [int(line.strip().split(" ")[column]) for line in irf if not line.strip() == ""]
            
         if len(irf_values) != image_data.shape[2]:
             raise Exception("Number of IRF values don't match time bins")
@@ -129,6 +129,8 @@ class Pipeline:
         # save irf as tif 
         # visualizer.plot_irf_data(final_irf_values, data_values)
         if not ui_mode:
+            output_path = "Outputs/" + image_name + "/channel" + str(channel) + "/"
+            
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
             
@@ -156,7 +158,7 @@ class Pipeline:
     # param: irf - path of txt file of irf
     # param: masks_path - path of where all masks are located
     # return: {"cells": [cell_data], "IRF_decay", [shifted_irf_values]}
-    def mask_image(self, sdt, irf, masks_path, channel = -1, ui_mode = False):
+    def mask_image(self, sdt, irf, masks_path, channel = -1, column = 0, ui_mode = False):
         # get image datafrom sdt
         sdt_data = sdt_reader.read_sdt150(sdt)
              
@@ -183,7 +185,7 @@ class Pipeline:
         metadata = self.__generate_metadata(sdt_data.shape[2])
                     
         # make shifted irf tif
-        IRF_decay = self.__generate_irf(irf, image_name, sdt_data, output_path, channel, ui_mode)
+        IRF_decay = self.__generate_irf(irf, image_name, sdt_data, channel, column, ui_mode=ui_mode)
         
         # get the mask of the sdt
         if os.path.isdir(masks_path): 
@@ -246,7 +248,7 @@ class Pipeline:
                          self.__swap_time_axis(summed_image), metadata = metadata)
             
             # make summed irf
-            summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, output_path, channel, summed=True)
+            summed_IRF_decay = self.__generate_irf(irf, image_name, summed_image, channel, column, summed=True)
 
         # return cell_images, cell value, IRF_decay, and output path as tuple
         if not ui_mode:

@@ -13,6 +13,7 @@ from pathlib import Path
 import sdt_reader as sdt
 from pipeline import Pipeline
 import os
+import shutil
 import csv
 
 # tests generate_metadata()
@@ -225,7 +226,7 @@ def test_generate_irf():
     
     exception = False
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, "Outputs/invalid/", 0)
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, 0, 0)
     except:
        exception = True
        
@@ -237,7 +238,7 @@ def test_generate_irf():
     
     exception = False
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, "Outputs/invalid/", 0)
+        testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "invalid", data, 0, 0)
     except:
        exception = True
        
@@ -249,7 +250,7 @@ def test_generate_irf():
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
     try:
-        testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data, "Outputs/whitespace/", 0)
+        testline._Pipeline__generate_irf("IRFs/testing/blanks.txt", "whitespace", data, 0, 0)
     except:
         return False
         
@@ -257,13 +258,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data, "Outputs/positive/", 0)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/positive_shift.txt", "positive", data, 0, 0)
     
     # check tif
-    if not os.path.exists("Outputs/positive/positive_channel0_irf.tif"):
+    if not os.path.exists("Outputs/positive/channel0/positive_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/positive/positive_channel0_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/positive/channel0/positive_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -285,10 +286,10 @@ def test_generate_irf():
         return False
     
     # check csv
-    if not os.path.exists("Outputs/positive/positive_channel0_irf.csv"):
+    if not os.path.exists("Outputs/positive/channel0/positive_channel0_irf.csv"):
         return False
     
-    with open("Outputs/positive/positive_channel0_irf.csv", mode = "r") as file:
+    with open("Outputs/positive/channel0/positive_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
         
@@ -312,13 +313,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data, "Outputs/Negative/", 0)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/negative_shift.txt", "negative", data, 0, 0)
     
     # check tif
-    if not os.path.exists("Outputs/negative/negative_channel0_irf.tif"):
+    if not os.path.exists("Outputs/negative/channel0/negative_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/negative/negative_channel0_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/negative/channel0/negative_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -340,10 +341,10 @@ def test_generate_irf():
         return False
     
     # check csv
-    if not os.path.exists("Outputs/negative/negative_channel0_irf.csv"):
+    if not os.path.exists("Outputs/negative/channel0/negative_channel0_irf.csv"):
         return False
     
-    with open("Outputs/negative/negative_channel0_irf.csv", mode = "r") as file:
+    with open("Outputs/negative/channel0/negative_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
         
@@ -365,13 +366,13 @@ def test_generate_irf():
     values = [0, 0, 0, 0, 0, 1, 1, 2, 4, 8, 16, 8, 4, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     data = np.array([[values, values, values, values], [values, values, values, values], [values, values, values, values], [values, values, values, values]])
     
-    actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data, "Outputs/no/", 0)
+    actual_values = testline._Pipeline__generate_irf("IRFs/testing/no_shift.txt", "no", data, 0, 0)
     
     # check tif
-    if not os.path.exists("Outputs/no/no_channel0_irf.tif"):
+    if not os.path.exists("Outputs/no/channel0/no_channel0_irf.tif"):
         return False
     
-    with tiff.TiffFile("Outputs/no/no_channel0_irf.tif") as tif:
+    with tiff.TiffFile("Outputs/no/channel0/no_channel0_irf.tif") as tif:
         actual_tif = tif.asarray()
         
     if actual_tif.dtype != np.float32:
@@ -393,10 +394,10 @@ def test_generate_irf():
         return False
         
     # check csv
-    if not os.path.exists("Outputs/no/no_channel0_irf.csv"):
+    if not os.path.exists("Outputs/no/channel0/no_channel0_irf.csv"):
         return False
     
-    with open("Outputs/no/no_channel0_irf.csv", mode = "r") as file:
+    with open("Outputs/no/channel0/no_channel0_irf.csv", mode = "r") as file:
         csv_file = csv.reader(file)
         next(csv_file, None)
 
@@ -426,7 +427,7 @@ def test_mask_image():
     testline = Pipeline()
     
     # first image
-    results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"), 1)
+    results = testline.mask_image(Path("dHL60_Control_DMSO_02_n-024.sdt"), "Ch2_IRF_750.txt", Path("./"), 1, 0)
     
     with tiff.TiffFile("dHL60_Control_DMSO_02_n-024_photons_cellpose.tiff") as mask_tif:
         mask = mask_tif.asarray()
@@ -604,6 +605,9 @@ def pass_fail(function):
 #=======================================================================================
 
 # do the tests
+if os.path.exists("Outputs"):
+    shutil.rmtree("Outputs")
+    
 print("test_generate_metadata(): " + pass_fail(test_generate_metadata))
 print("test_swap_time_axis(): " + pass_fail(test_swap_time_axis))
 print("test_shift(): " + pass_fail(test_shift))

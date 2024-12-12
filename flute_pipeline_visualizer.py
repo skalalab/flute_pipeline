@@ -71,11 +71,11 @@ def plot_phasor(title, coords, names, show = False):
         g = [gs[0] for gs in subcoords]
         s = [gs[1] for gs in subcoords]
         
-        plt.scatter(g, s, s=3, label=names[i], alpha=alpha)
+        ax.scatter(g, s, s=4, label=names[i], alpha=alpha)
     
     # plot (if needed) and save
-    plt.legend()
-    plt.savefig("Outputs/Graphs/" + title + ".png")
+    ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    plt.savefig("Outputs/Graphs/" + title + ".png", bbox_inches="tight")
     
     if show:
         plt.show()
